@@ -5,9 +5,18 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - promotion.cloudoperators.dev
   resources:
   - promotions
+  - revisions
   - sources
   verbs:
   - create
@@ -21,6 +30,7 @@ rules:
   - promotion.cloudoperators.dev
   resources:
   - promotions/finalizers
+  - revisions/finalizers
   - sources/finalizers
   verbs:
   - update
@@ -28,8 +38,29 @@ rules:
   - promotion.cloudoperators.dev
   resources:
   - promotions/status
+  - revisions/status
   - sources/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - source.toolkit.fluxcd.io
+  resources:
+  - helmcharts
+  - helmrepositories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - source.toolkit.fluxcd.io
+  resources:
+  - helmcharts/status
+  - helmrepositories/status
+  verbs:
+  - get
