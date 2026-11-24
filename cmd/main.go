@@ -182,6 +182,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := (&promotioncontroller.RevisionReconciler{}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "promotion-revision")
+		os.Exit(1)
+	}
 	if err := (&promotioncontroller.SourceReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

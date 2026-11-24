@@ -1,0 +1,296 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: revisions.promotion.cloudoperators.dev
+spec:
+  group: promotion.cloudoperators.dev
+  names:
+    kind: Revision
+    listKind: RevisionList
+    plural: revisions
+    shortNames:
+    - rev
+    singular: revision
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.version
+      name: Version
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Referenced")].status
+      name: Referenced
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Revision is the Schema for the revisions API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              RevisionSpec defines the desired state of Revision.
+              Written once at creation by the Source controller; immutable thereafter.
+            properties:
+              definition:
+                description: Definition holds the pristine, unmodified PluginDefinition
+                  resolved at spec.ref.
+                properties:
+                  kind:
+                    description: Kind is "PluginDefinition" or "ClusterPluginDefinition".
+                    type: string
+                  spec:
+                    description: Spec is the full PluginDefinition spec at the resolved
+                      ref.
+                    properties:
+                      description:
+                        description: Description provides additional details.
+                        type: string
+                      displayName:
+                        description: DisplayName is a human-readable label.
+                        type: string
+                      helmChart:
+                        description: HelmChart specifies where the Helm chart can
+                          be found.
+                        properties:
+                          name:
+                            description: Name of the Helm chart.
+                            type: string
+                          repository:
+                            description: Repository is the chart repository URL (https://
+                              or oci://).
+                            type: string
+                          version:
+                            description: Version is the SemVer chart version.
+                            type: string
+                        required:
+                        - name
+                        - repository
+                        - version
+                        type: object
+                      icon:
+                        description: Icon is a URL or juno icon name.
+                        type: string
+                      options:
+                        description: Options are the configurable options for this
+                          PluginDefinition.
+                        items:
+                          description: |-
+                            RevisionOption is a configurable option carried from the PluginDefinition.
+                            Defaults here are pristine; overrides from spec.overrides are applied separately at consume time.
+                          properties:
+                            default:
+                              description: Default is the pristine default value from
+                                the upstream PluginDefinition.
+                              x-kubernetes-preserve-unknown-fields: true
+                            description:
+                              description: Description is a human-readable explanation
+                                of the option.
+                              type: string
+                            name:
+                              description: Name of the option.
+                              type: string
+                            required:
+                              description: Required indicates this option must be
+                                provided by a consumer.
+                              type: boolean
+                            type:
+                              description: Type is the value type.
+                              enum:
+                              - string
+                              - secret
+                              - bool
+                              - int
+                              - list
+                              - map
+                              type: string
+                          required:
+                          - name
+                          - required
+                          - type
+                          type: object
+                        type: array
+                      version:
+                        description: Version of the PluginDefinition.
+                        type: string
+                    required:
+                    - version
+                    type: object
+                required:
+                - kind
+                - spec
+                type: object
+              digest:
+                description: Digest is the sha256 of the definition file at spec.ref.
+                type: string
+              overrides:
+                description: |-
+                  Overrides are copied from the owning Source at creation time and applied at consume
+                  time by the promotions-server. Never merged into spec.definition.
+                properties:
+                  options:
+                    description: Options overrides default values for specific PluginDefinition
+                      options.
+                    items:
+                      description: OptionOverride replaces the default value of a
+                        named option at consume time.
+                      properties:
+                        name:
+                          description: Name matches a RevisionOption name in the definition.
+                          type: string
+                        value:
+                          description: Value replaces the option's default value.
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                type: object
+              ref:
+                description: Ref is the upstream ref (git tag, OCI tag) this Revision
+                  was resolved from.
+                type: string
+              sourceRef:
+                description: SourceRef names the Source that owns this Revision.
+                properties:
+                  name:
+                    description: Name of the Source in the same namespace.
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - definition
+            - digest
+            - ref
+            - sourceRef
+            type: object
+          status:
+            description: RevisionStatus defines the observed state of Revision.
+            properties:
+              conditions:
+                description: Conditions reflect the Revision's reconcile state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              helmChart:
+                description: HelmChart reflects the Flux chart sync and OCI mirroring
+                  outcome.
+                properties:
+                  mirroredRepository:
+                    description: MirroredRepository is the internal OCI registry URL
+                      the chart was mirrored to.
+                    type: string
+                  mirroredVersion:
+                    description: MirroredVersion is the chart version in the mirrored
+                      repository.
+                    type: string
+                  sourceRef:
+                    description: SourceRef is the name of the owned Flux HelmChart
+                      resource.
+                    type: string
+                required:
+                - sourceRef
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the metadata.generation this status
+                  was computed from.
+                format: int64
+                type: integer
+              resolvedAt:
+                description: ResolvedAt is when this Revision was last successfully
+                  reconciled.
+                format: date-time
+                type: string
+              version:
+                description: Version mirrors spec.definition.spec.version for quick
+                  inspection.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
