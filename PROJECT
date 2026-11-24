@@ -26,6 +26,15 @@ resources:
   controller: true
   domain: cloudoperators.dev
   group: promotion
+  kind: Promotion
+  path: github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cloudoperators.dev
+  group: promotion
   kind: Environment
   path: github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1
   version: v1alpha1
