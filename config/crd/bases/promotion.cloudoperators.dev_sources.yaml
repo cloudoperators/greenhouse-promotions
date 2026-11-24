@@ -39,10 +39,76 @@ spec:
           spec:
             description: spec defines the desired state of Source
             properties:
-              foo:
-                description: foo is an example field of Source. Edit source_types.go
-                  to remove/update
+              git:
+                properties:
+                  path:
+                    type: string
+                  ref:
+                    description: Reference contains the tag to resolve PluginDefinitions
+                      from
+                    properties:
+                      tag:
+                        description: Tag is the semver tag to resolve PluginDefinitions
+                        type: string
+                    required:
+                    - tag
+                    type: object
+                  secretRef:
+                    description: SecretKeyReference specifies the secret and key containing
+                      the value.
+                    properties:
+                      key:
+                        description: Key in the secret to select the value from.
+                        type: string
+                      name:
+                        description: Name of the secret in the same namespace.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  url:
+                    type: string
+                required:
+                - path
+                - ref
+                - url
+                type: object
+              interval:
+                default: 1h
+                description: Interval defines how often to reconcile the repository
+                  source
+                pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                 type: string
+              override:
+                description: Overrides are the PluginDefinition overrides to be applied
+                properties:
+                  optionsOverride:
+                    description: OptionsOverride are the option values to override
+                      in the PluginDefinition .spec.options[]
+                    items:
+                      properties:
+                        name:
+                          description: Name is the name of the option value to override
+                            in the PluginDefinition
+                          minLength: 1
+                          type: string
+                        value:
+                          description: Value is the value to set as Default in the
+                            PluginDefinition option
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  repository:
+                    description: Repository is the repository to override in the PluginDefinition
+                      .spec.helmChart.repository
+                    type: string
+                type: object
+            required:
+            - git
             type: object
           status:
             description: status defines the observed state of Source
