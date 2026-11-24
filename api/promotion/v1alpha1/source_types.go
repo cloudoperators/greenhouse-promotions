@@ -34,6 +34,7 @@ type SourceSpec struct {
 	// +Optional
 	Interval *metav1.Duration `json:"interval,omitempty"`
 	Git      *GitRepository   `json:"git"`
+	Oci		 *OciRegistry	  `json:"oci"`
 
 	// Overrides are the PluginDefinition overrides to be applied
 	// +Optional
@@ -57,6 +58,18 @@ type OptionsOverride struct {
 	// Value is the value to set as Default in the PluginDefinition option
 	// +Required
 	Value *apiextensionsv1.JSON `json:"value"`
+}
+
+type OciRegistry struct {
+	URL string `json:"url"`
+	Ref *Reference `json:"ref"`
+	SecretRef *SecretKeyReference `json:"secretRef,omitempty"`
+	LayerSelector *LayerSelector `json:"layerSelector,omitempty"`
+}
+
+// LayerSelector identifies a specific layer within an OCI artifact.
+type LayerSelector struct {
+	MediaType string `json:"mediaType,omitempty"`
 }
 
 type GitRepository struct {
