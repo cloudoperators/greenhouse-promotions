@@ -62,9 +62,14 @@ type OptionsOverride struct {
 
 type OciRegistry struct {
 	URL string `json:"url"`
-	Ref *Reference `json:"ref"`
+	Ref *OciReference `json:"ref"`
 	SecretRef *SecretKeyReference `json:"secretRef,omitempty"`
 	LayerSelector *LayerSelector `json:"layerSelector,omitempty"`
+}
+
+// OciReference specifies a version to resolve from an OCI registry.
+type OciReference struct {
+	Semver string `json:"semver,omitempty"`
 }
 
 // LayerSelector identifies a specific layer within an OCI artifact.
