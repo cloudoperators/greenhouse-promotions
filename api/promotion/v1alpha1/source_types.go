@@ -34,7 +34,7 @@ type SourceSpec struct {
 	// +Optional
 	Interval *metav1.Duration `json:"interval,omitempty"`
 	Git      *GitRepository   `json:"git"`
-	Oci		 *OciRegistry	  `json:"oci"`
+	Oci      *OciRegistry     `json:"oci"`
 
 	// Overrides are the PluginDefinition overrides to be applied
 	// +Optional
@@ -61,10 +61,10 @@ type OptionsOverride struct {
 }
 
 type OciRegistry struct {
-	URL string `json:"url"`
-	Ref *OciReference `json:"ref"`
-	SecretRef *SecretKeyReference `json:"secretRef,omitempty"`
-	LayerSelector *LayerSelector `json:"layerSelector,omitempty"`
+	URL           string              `json:"url"`
+	Ref           *OciReference       `json:"ref"`
+	SecretRef     *SecretKeyReference `json:"secretRef,omitempty"`
+	LayerSelector *LayerSelector      `json:"layerSelector,omitempty"`
 }
 
 // OciReference specifies a version to resolve from an OCI registry.
