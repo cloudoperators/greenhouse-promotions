@@ -26,7 +26,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // SourceSpec defines the desired state of Source
-// +kubebuilder:validation:XValidation:rule="(has(self.git) && !has(self.oci)) || (!has(self.git) && has(self.oci))",message="exactly one of git or oci must be specified"
+// +kubebuilder:validation:ExactlyOneOf=git;oci
 type SourceSpec struct {
 	// Interval defines how often to reconcile the repository source
 	// +kubebuilder:validation:Type=string
