@@ -9,6 +9,8 @@ rules:
   resources:
   - clusters
   - plugins
+  - ""
+  - secrets
   verbs:
   - get
   - list
@@ -18,6 +20,7 @@ rules:
   resources:
   - environments
   - promotions
+  - revisions
   - sources
   verbs:
   - create
@@ -32,6 +35,7 @@ rules:
   resources:
   - environments/finalizers
   - promotions/finalizers
+  - revisions/finalizers
   - sources/finalizers
   verbs:
   - update
@@ -40,6 +44,7 @@ rules:
   resources:
   - environments/status
   - promotions/status
+  - revisions/status
   - sources/status
   verbs:
   - get
@@ -63,3 +68,23 @@ rules:
   - list
   - update
   - watch
+- apiGroups:
+  - source.toolkit.fluxcd.io
+  resources:
+  - helmcharts
+  - helmrepositories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - source.toolkit.fluxcd.io
+  resources:
+  - helmcharts/status
+  - helmrepositories/status
+  verbs:
+  - get
