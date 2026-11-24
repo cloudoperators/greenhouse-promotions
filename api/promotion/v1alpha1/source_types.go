@@ -26,6 +26,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // SourceSpec defines the desired state of Source
+// +kubebuilder:validation:XValidation:rule="(has(self.git) && !has(self.oci)) || (!has(self.git) && has(self.oci))",message="exactly one of git or oci must be specified"
 type SourceSpec struct {
 	// Interval defines how often to reconcile the repository source
 	// +kubebuilder:validation:Type=string
@@ -33,8 +34,10 @@ type SourceSpec struct {
 	// +kubebuilder:default="1h"
 	// +Optional
 	Interval *metav1.Duration `json:"interval,omitempty"`
-	Git      *GitRepository   `json:"git"`
-	Oci      *OciRegistry     `json:"oci"`
+	// +Optional
+	Git *GitRepository `json:"git,omitempty"`
+	// +Optional
+	Oci *OciRegistry `json:"oci,omitempty"`
 
 	// Overrides are the PluginDefinition overrides to be applied
 	// +Optional
