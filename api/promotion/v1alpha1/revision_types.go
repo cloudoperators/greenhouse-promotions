@@ -107,17 +107,10 @@ type OptionOverride struct {
 	Value *apiextensionsv1.JSON `json:"value"`
 }
 
-// LocalSourceReference names the Source that owns a Revision.
-type LocalSourceReference struct {
-	// Name of the Source in the same namespace.
-	Name string `json:"name"`
-}
-
 // RevisionSpec defines the desired state of Revision.
 // Written once at creation by the Source controller; immutable thereafter.
+// The owning Source is recorded via ownerReference; use a field indexer on ownerUID to look up Revisions by Source.
 type RevisionSpec struct {
-	// SourceRef names the Source that owns this Revision.
-	SourceRef LocalSourceReference `json:"sourceRef"`
 	// Ref is the upstream ref (git tag, OCI tag) this Revision was resolved from.
 	Ref string `json:"ref"`
 	// Digest is the sha256 of the definition file at spec.ref.
