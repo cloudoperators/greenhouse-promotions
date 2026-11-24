@@ -7,6 +7,7 @@ rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - promotions
   - sources
   verbs:
   - create
@@ -19,12 +20,14 @@ rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - promotions/finalizers
   - sources/finalizers
   verbs:
   - update
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - promotions/status
   - sources/status
   verbs:
   - get

@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/promotion.cloudoperators.dev_sources.yaml
+- bases/promotion.cloudoperators.dev_promotions.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
