@@ -16,7 +16,6 @@ const (
 
 	// RevisionLabelSource is the label key recording which Source owns a Revision.
 	RevisionLabelSource = "promotion.cloudoperators.dev/source"
-
 )
 
 // RevisionOptionType is the type of a configurable option carried from the PluginDefinition.
