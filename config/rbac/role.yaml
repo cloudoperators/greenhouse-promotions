@@ -5,8 +5,18 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - greenhouse.sap
+  resources:
+  - clusters
+  - plugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - environments
   - sources
   verbs:
   - create
@@ -19,14 +29,34 @@ rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - environments/finalizers
   - sources/finalizers
   verbs:
   - update
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - environments/status
   - sources/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - promotion.cloudoperators.dev
+  resources:
+  - promotions
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - promotion.cloudoperators.dev
+  resources:
+  - revisions
+  verbs:
+  - get
+  - list
+  - update
+  - watch
