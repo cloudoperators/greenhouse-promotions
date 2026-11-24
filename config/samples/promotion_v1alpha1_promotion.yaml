@@ -1,0 +1,12 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Promotion
+metadata:
+  labels:
+    app.kubernetes.io/name: greenhouse-promotions
+    app.kubernetes.io/managed-by: kustomize
+  name: promotion-sample
+spec:
+  revisionRef:
+    name: podinfo-6-9-0
+  pluginRefs:
+    - name: podinfo-example-cluster
