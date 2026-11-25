@@ -27,9 +27,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
+	"github.com/cloudoperators/greenhouse-promotions/internal/flux"
 )
 
 const resolvePath = "/apis/promotion.cloudoperators.dev/v1alpha1/namespaces/:namespace/revisions/:name/resolve"
+
+type resolvedPluginDefinition struct {
+	*greenhousev1alpha1.PluginDefinition
+	Status resolvedStatus `json:"status"`
+}
+
+type resolvedStatus struct {
+	Flux *fluxResources `json:"flux,omitempty"`
+}
+
+type fluxResources struct {
+	HelmChart      string `json:"helmChart"`
+	HelmRepository string `json:"helmRepository"`
+}
 
 func NewHandler(reader client.Reader) http.Handler {
 	e := echo.New()
@@ -48,7 +63,10 @@ func NewHandler(reader client.Reader) http.Handler {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, pluginDefinition)
+		return c.JSON(http.StatusOK, resolvedPluginDefinition{
+			PluginDefinition: pluginDefinition,
+			Status:           resolvedStatus{Flux: fluxResourcesFor(revision)},
+		})
 	})
 	return e
 }
@@ -66,4 +84,15 @@ func pluginDefinitionFor(revision *promotionv1alpha1.Revision) (*greenhousev1alp
 		return nil, err
 	}
 	return pluginDefinition, nil
+}
+
+func fluxResourcesFor(revision *promotionv1alpha1.Revision) *fluxResources {
+	helmChart := revision.Spec.Definition.Spec.HelmChart
+	if helmChart == nil {
+		return nil
+	}
+	return &fluxResources{
+		HelmChart:      revision.FluxHelmChartResourceName(),
+		HelmRepository: flux.ChartURLToName(helmChart.Repository),
+	}
 }
