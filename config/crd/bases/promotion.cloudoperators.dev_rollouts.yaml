@@ -87,9 +87,6 @@ spec:
             - pluginRefs
             - revisionRef
             type: object
-            x-kubernetes-validations:
-            - message: spec is immutable
-              rule: self == oldSelf
           status:
             description: status defines the observed state of Rollout
             properties:
@@ -158,19 +155,19 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               finishedAt:
-                description: finishedAt is when the Rollout reached a final phase.
+                description: finishedAt is when the Rollout reached Succeeded or Failed.
                 format: date-time
                 type: string
               phase:
-                description: phase is where the Rollout stands. Succeeded and Failed
-                  are final.
+                description: phase is where the Rollout stands.
                 enum:
                 - Running
                 - Succeeded
                 - Failed
                 type: string
               startedAt:
-                description: startedAt is when the controller picked up the Rollout.
+                description: startedAt is when the controller picked up the current
+                  spec.
                 format: date-time
                 type: string
               targets:
