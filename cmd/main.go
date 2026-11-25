@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"net/http"
 	"os"
 
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -33,6 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -41,6 +43,7 @@ import (
 
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	promotioncontroller "github.com/cloudoperators/greenhouse-promotions/internal/controller/promotion"
+	"github.com/cloudoperators/greenhouse-promotions/internal/server"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -67,12 +70,14 @@ func main() {
 	var webhookPort int
 	var enableLeaderElection bool
 	var probeAddr string
+	var serverAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&serverAddr, "promotion-server-bind-address", ":8082", "The address the promotion server binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -215,6 +220,14 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	if err := mgr.Add(&manager.Server{
+		Name:   "promotion",
+		Server: &http.Server{Addr: serverAddr, Handler: server.NewHandler(mgr.GetClient())},
+	}); err != nil {
+		setupLog.Error(err, "Failed to add the promotion server")
+		os.Exit(1)
+	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "Failed to set up health check")
