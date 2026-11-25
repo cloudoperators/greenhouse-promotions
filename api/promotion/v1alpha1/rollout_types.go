@@ -54,7 +54,6 @@ type PluginReference struct {
 }
 
 // RolloutSpec defines the desired state of Rollout
-// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="spec is immutable"
 type RolloutSpec struct {
 	// revisionRef is the Revision the target Plugins move to.
 	// +required
@@ -79,15 +78,15 @@ type RolloutTargets struct {
 
 // RolloutStatus defines the observed state of Rollout.
 type RolloutStatus struct {
-	// phase is where the Rollout stands. Succeeded and Failed are final.
+	// phase is where the Rollout stands.
 	// +optional
 	Phase RolloutPhase `json:"phase,omitempty"`
 
-	// startedAt is when the controller picked up the Rollout.
+	// startedAt is when the controller picked up the current spec.
 	// +optional
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// finishedAt is when the Rollout reached a final phase.
+	// finishedAt is when the Rollout reached Succeeded or Failed.
 	// +optional
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 
