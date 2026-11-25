@@ -15,8 +15,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	"github.com/cloudoperators/greenhouse-promotions/internal/flux"
 	"github.com/cloudoperators/greenhouse-promotions/internal/lifecycle"
@@ -77,6 +78,8 @@ func (r *RevisionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
 	revision := obj.(*promotionv1alpha1.Revision)
 
+	r.initializeConditions(revision)
+
 	if revision.Spec.Definition.Spec.HelmChart == nil {
 		return ctrl.Result{}, lifecycle.Success, nil
 	}
@@ -95,6 +98,11 @@ func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Ru
 	}
 
 	r.setReferencedCondition(revision)
+	r.setReadyCondition(revision)
+
+	revision.Status.Version = revision.Spec.Definition.Spec.Version
+	now := metav1.Now()
+	revision.Status.ResolvedAt = &now
 
 	return ctrl.Result{}, lifecycle.Success, nil
 }
@@ -312,4 +320,44 @@ func (r *RevisionReconciler) setReferencedCondition(revision *promotionv1alpha1.
 	}
 	c.ObservedGeneration = revision.Generation
 	revision.SetCondition(c)
+}
+
+// setReadyCondition derives the Ready condition from HelmChartReady.
+func (r *RevisionReconciler) setReadyCondition(revision *promotionv1alpha1.Revision) {
+	helmChartReady := revision.GetConditionByType("HelmChartReady")
+	var c metav1.Condition
+	if helmChartReady == nil || helmChartReady.Status != metav1.ConditionTrue {
+		msg := "HelmChart not ready"
+		if helmChartReady != nil {
+			msg = helmChartReady.Message
+		}
+		c = metav1.Condition{
+			Type:    string(kmeta.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  "HelmChartNotReady",
+			Message: msg,
+		}
+	} else {
+		c = metav1.Condition{
+			Type:    string(kmeta.ReadyCondition),
+			Status:  metav1.ConditionTrue,
+			Reason:  "Resolved",
+			Message: "Revision resolved and chart ready",
+		}
+	}
+	c.ObservedGeneration = revision.Generation
+	revision.SetCondition(c)
+}
+
+// initializeConditions sets HelmChartReady and Referenced to Unknown at the start of each reconcile.
+func (r *RevisionReconciler) initializeConditions(revision *promotionv1alpha1.Revision) {
+	for _, t := range []string{"HelmChartReady", "Referenced"} {
+		revision.SetCondition(metav1.Condition{
+			Type:               t,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "Initializing",
+			Message:            "Reconciliation in progress",
+			ObservedGeneration: revision.Generation,
+		})
+	}
 }

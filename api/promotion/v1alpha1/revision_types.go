@@ -198,6 +198,11 @@ func (r *Revision) GetReadyCondition() *metav1.Condition {
 	return kmeta.GetConditionByType(r.Status.Conditions, kmeta.ReadyCondition)
 }
 
+// GetConditionByType returns the condition of the given type, or nil.
+func (r *Revision) GetConditionByType(t string) *metav1.Condition {
+	return kmeta.GetConditionByType(r.Status.Conditions, kmeta.ConditionType(t))
+}
+
 // +kubebuilder:object:root=true
 
 // RevisionList contains a list of Revision.
