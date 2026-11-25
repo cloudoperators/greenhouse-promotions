@@ -13,8 +13,18 @@ rules:
   - list
   - watch
 - apiGroups:
+  - greenhouse.sap
+  resources:
+  - clusters
+  - plugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - environments
   - promotions
   - revisions
   - sources
@@ -29,6 +39,7 @@ rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - environments/finalizers
   - promotions/finalizers
   - revisions/finalizers
   - sources/finalizers
@@ -37,6 +48,7 @@ rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
+  - environments/status
   - promotions/status
   - revisions/status
   - sources/status
