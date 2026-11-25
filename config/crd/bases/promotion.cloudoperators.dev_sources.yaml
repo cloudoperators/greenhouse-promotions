@@ -11,10 +11,22 @@ spec:
     kind: Source
     listKind: SourceList
     plural: sources
+    shortNames:
+    - src
     singular: source
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.latestRevisionName
+      name: Latest
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Source is the Schema for the sources API
@@ -39,6 +51,14 @@ spec:
           spec:
             description: spec defines the desired state of Source
             properties:
+              discoveryLimit:
+                default: 5
+                description: |-
+                  DiscoveryLimit caps how many of the newest discovered versions are frozen
+                  into Revisions and reported in status, newest-first.
+                format: int32
+                minimum: 1
+                type: integer
               interval:
                 default: 1h
                 description: Interval defines how often to reconcile the repository
@@ -205,6 +225,57 @@ spec:
                 type: array
                 x-kubernetes-list-map-keys:
                 - type
+                x-kubernetes-list-type: map
+              lastAttemptTime:
+                description: LastAttemptTime is when discovery last ran, regardless
+                  of outcome.
+                format: date-time
+                type: string
+              lastChangeTime:
+                description: LastChangeTime is when the resolved upstream ref last
+                  changed.
+                format: date-time
+                type: string
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh is the value of the promotion.cloudoperators.dev/refresh
+                  annotation the controller last acted on (push trigger).
+                type: string
+              latestRevisionName:
+                description: LatestRevisionName is the name of the newest Revision
+                  this Source created.
+                type: string
+              revisions:
+                description: Revisions is the ordered (newest-first) list of Revisions
+                  this Source created.
+                items:
+                  description: SourceRevision references one Revision resource this
+                    Source created.
+                  properties:
+                    createdAt:
+                      description: CreatedAt is when the Revision was created.
+                      format: date-time
+                      type: string
+                    digest:
+                      description: Digest is the sha256 of the definition file the
+                        Revision was frozen from.
+                      type: string
+                    name:
+                      description: Name of the Revision resource.
+                      type: string
+                    ready:
+                      description: Ready mirrors the Revision's Ready condition (true
+                        once its chart is synced).
+                      type: boolean
+                  required:
+                  - createdAt
+                  - digest
+                  - name
+                  - ready
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
                 x-kubernetes-list-type: map
             type: object
         required:

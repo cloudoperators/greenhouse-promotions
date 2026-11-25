@@ -58,8 +58,9 @@ spec:
               The owning Source is recorded via ownerReference; use a field indexer on ownerUID to look up Revisions by Source.
             properties:
               definition:
-                description: Definition holds the pristine, unmodified PluginDefinition
-                  resolved at spec.ref.
+                description: |-
+                  Definition holds the resolved PluginDefinition at spec.ref, with the owning
+                  Source's overrides already applied.
                 properties:
                   kind:
                     description: Kind is "PluginDefinition" or "ClusterPluginDefinition".
@@ -102,11 +103,11 @@ spec:
                         items:
                           description: |-
                             RevisionOption is a configurable option carried from the PluginDefinition.
-                            Defaults here are pristine; overrides from spec.overrides are applied separately at consume time.
+                            Defaults reflect the owning Source's overrides where they apply.
                           properties:
                             default:
-                              description: Default is the pristine default value from
-                                the upstream PluginDefinition.
+                              description: Default is the option's default value,
+                                after Source overrides are applied.
                               x-kubernetes-preserve-unknown-fields: true
                             description:
                               description: Description is a human-readable explanation
@@ -148,25 +149,6 @@ spec:
               digest:
                 description: Digest is the sha256 of the definition file at spec.ref.
                 type: string
-              optionOverrides:
-                description: |-
-                  OptionOverrides are copied from the owning Source at creation time and applied at
-                  consume time by the promotions-server. Never merged into spec.definition.
-                items:
-                  description: OptionOverride replaces the default value of a named
-                    option at consume time.
-                  properties:
-                    name:
-                      description: Name matches a RevisionOption name in the definition.
-                      type: string
-                    value:
-                      description: Value replaces the option's default value.
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - name
-                  - value
-                  type: object
-                type: array
               ref:
                 description: Ref is the upstream ref (git tag, OCI tag) this Revision
                   was resolved from.

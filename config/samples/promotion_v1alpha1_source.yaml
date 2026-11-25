@@ -1,14 +1,34 @@
 apiVersion: promotion.cloudoperators.dev/v1alpha1
 kind: Source
 metadata:
-  labels:
-    app.kubernetes.io/name: greenhouse-promotions
-    app.kubernetes.io/managed-by: kustomize
-  name: source-sample
+  name: cert-manager
 spec:
   interval: 1h
+  discoveryLimit: 5
   source:
     git:
       url: https://github.com/cloudoperators/greenhouse-extensions
       path: cert-manager/plugindefinition.yaml
+      # discover tags under the cert-manager/ prefix
       tagPattern: cert-manager/*
+      # or discover by semver range instead of a tag glob:
+      # semverConstraint: ">=1.0.0"
+      # private repo: Secret in this namespace (basic-auth or github-app)
+      # secretRef:
+      #   name: git-auth
+      #   key: token
+    # discover from an OCI registry instead of git:
+    # oci:
+    #   url: oci://ghcr.io/cloudoperators/greenhouse-extensions/cert-manager
+    #   semverConstraint: ">=1.0.0"
+    #   layerSelector:
+    #     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    #   # private registry: Secret in this namespace (dockerconfigjson)
+    #   secretRef:
+    #     name: oci-auth
+  override:
+    optionsOverride:
+      - name: cert-manager.installCRDs
+        value: true
+      - name: cert-manager.webhook.timeoutSeconds
+        value: 30

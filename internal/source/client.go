@@ -64,9 +64,13 @@ type Version struct {
 	CreatedAt time.Time
 }
 
-// Client discovers versions from a source, newest first.
+// Client discovers versions from a source, newest first, and fetches the
+// definition file at a specific discovered ref.
 type Client interface {
 	Discover(ctx context.Context) ([]Version, error)
+	// Fetch returns the raw bytes of filePath at the given ref (git tag/commit,
+	// or OCI tag). The ref is a Version.Version returned by Discover.
+	Fetch(ctx context.Context, ref, filePath string) ([]byte, error)
 }
 
 type GitConfig struct {

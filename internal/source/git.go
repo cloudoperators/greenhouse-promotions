@@ -144,3 +144,47 @@ func semverPart(tag string) string {
 	}
 	return tag
 }
+
+// Fetch clones the single tag ref shallow into memory and returns the bytes of
+// filePath at that ref.
+func (c *gitClient) Fetch(ctx context.Context, ref, filePath string) ([]byte, error) {
+	auth, err := c.authMethod()
+	if err != nil {
+		return nil, err
+	}
+
+	refName := plumbing.NewTagReferenceName(ref)
+	repo, err := git.CloneContext(ctx, memory.NewStorage(), nil, &git.CloneOptions{
+		URL:           c.cfg.Repository,
+		Auth:          auth,
+		ReferenceName: refName,
+		SingleBranch:  true,
+		Depth:         1,
+		Tags:          git.NoTags,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("git source: clone %s at %s: %w", c.cfg.Repository, ref, err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return nil, fmt.Errorf("git source: head at %s: %w", ref, err)
+	}
+	commit, err := repo.CommitObject(head.Hash())
+	if err != nil {
+		return nil, fmt.Errorf("git source: commit %s: %w", head.Hash(), err)
+	}
+	tree, err := commit.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("git source: tree at %s: %w", ref, err)
+	}
+	file, err := tree.File(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("git source: file %q at %s: %w", filePath, ref, err)
+	}
+	contents, err := file.Contents()
+	if err != nil {
+		return nil, fmt.Errorf("git source: read %q at %s: %w", filePath, ref, err)
+	}
+	return []byte(contents), nil
+}
