@@ -37,7 +37,7 @@ type EnvironmentReconciler struct {
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=environments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=environments/finalizers,verbs=update
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=sources,verbs=get;list;watch
-// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=promotions,verbs=get;list;watch;create
+// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=rollouts,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=revisions,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups=greenhouse.sap,resources=plugins,verbs=get;list;watch
 // +kubebuilder:rbac:groups=greenhouse.sap,resources=clusters,verbs=get;list;watch

@@ -27,26 +27,26 @@ import (
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 )
 
-// PromotionReconciler reconciles a Promotion object
-type PromotionReconciler struct {
+// RolloutReconciler reconciles a Rollout object
+type RolloutReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=promotions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=promotions/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=promotions/finalizers,verbs=update
+// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=rollouts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=rollouts/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=rollouts/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Promotion object against the actual cluster state, and then
+// the Rollout object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.25.0/pkg/reconcile
-func (r *PromotionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *RolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = logf.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -55,9 +55,9 @@ func (r *PromotionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PromotionReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *RolloutReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&promotionv1alpha1.Promotion{}).
-		Named("promotion-promotion").
+		For(&promotionv1alpha1.Rollout{}).
+		Named("promotion-rollout").
 		Complete(r)
 }

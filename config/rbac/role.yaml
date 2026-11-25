@@ -25,8 +25,8 @@ rules:
   - promotion.cloudoperators.dev
   resources:
   - environments
-  - promotions
   - revisions
+  - rollouts
   - sources
   verbs:
   - create
@@ -40,8 +40,8 @@ rules:
   - promotion.cloudoperators.dev
   resources:
   - environments/finalizers
-  - promotions/finalizers
   - revisions/finalizers
+  - rollouts/finalizers
   - sources/finalizers
   verbs:
   - update
@@ -49,8 +49,8 @@ rules:
   - promotion.cloudoperators.dev
   resources:
   - environments/status
-  - promotions/status
   - revisions/status
+  - rollouts/status
   - sources/status
   verbs:
   - get
