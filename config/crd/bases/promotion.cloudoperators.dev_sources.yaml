@@ -80,6 +80,37 @@ spec:
                   source
                 pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                 type: string
+              oci:
+                properties:
+                  layerSelector:
+                    description: LayerSelector identifies a specific layer within
+                      an OCI artifact.
+                    properties:
+                      mediaType:
+                        type: string
+                    type: object
+                  ref:
+                    description: OciReference specifies a version to resolve from
+                      an OCI registry.
+                    properties:
+                      semver:
+                        type: string
+                    type: object
+                  secretRef:
+                    description: SecretRef references a secret by name in the same
+                      namespace.
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  url:
+                    type: string
+                required:
+                - ref
+                - url
+                type: object
               override:
                 description: Overrides are the PluginDefinition overrides to be applied
                 properties:
@@ -107,9 +138,10 @@ spec:
                       .spec.helmChart.repository
                     type: string
                 type: object
-            required:
-            - git
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of the fields in [git oci] must be set
+              rule: (has(self.git)?1:0)+(has(self.oci)?1:0) == 1
           status:
             description: status defines the observed state of Source
             properties:

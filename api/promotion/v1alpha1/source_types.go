@@ -26,6 +26,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // SourceSpec defines the desired state of Source
+// +kubebuilder:validation:ExactlyOneOf=git;oci
 type SourceSpec struct {
 	// Interval defines how often to reconcile the repository source
 	// +kubebuilder:validation:Type=string
@@ -33,7 +34,10 @@ type SourceSpec struct {
 	// +kubebuilder:default="1h"
 	// +Optional
 	Interval *metav1.Duration `json:"interval,omitempty"`
-	Git      *GitRepository   `json:"git"`
+	// +Optional
+	Git *GitRepository `json:"git,omitempty"`
+	// +Optional
+	Oci *OciRegistry `json:"oci,omitempty"`
 
 	// Overrides are the PluginDefinition overrides to be applied
 	// +Optional
@@ -57,6 +61,28 @@ type OptionsOverride struct {
 	// Value is the value to set as Default in the PluginDefinition option
 	// +Required
 	Value *apiextensionsv1.JSON `json:"value"`
+}
+
+type OciRegistry struct {
+	URL           string         `json:"url"`
+	Ref           *OciReference  `json:"ref"`
+	SecretRef     *SecretRef     `json:"secretRef,omitempty"`
+	LayerSelector *LayerSelector `json:"layerSelector,omitempty"`
+}
+
+// SecretRef references a secret by name in the same namespace.
+type SecretRef struct {
+	Name string `json:"name"`
+}
+
+// OciReference specifies a version to resolve from an OCI registry.
+type OciReference struct {
+	Semver string `json:"semver,omitempty"`
+}
+
+// LayerSelector identifies a specific layer within an OCI artifact.
+type LayerSelector struct {
+	MediaType string `json:"mediaType,omitempty"`
 }
 
 type GitRepository struct {
