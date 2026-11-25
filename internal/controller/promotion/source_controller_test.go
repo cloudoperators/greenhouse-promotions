@@ -54,7 +54,13 @@ var _ = Describe("Source Controller", func() {
 						Name:      resourceName,
 						Namespace: resourceNamespace,
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: promotionv1alpha1.SourceSpec{
+						Git: &promotionv1alpha1.GitRepository{
+							URL:  "https://github.com/cloudoperators/greenhouse-extensions",
+							Path: "/",
+							Ref:  &promotionv1alpha1.Reference{Tag: "v1.0.0"},
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
