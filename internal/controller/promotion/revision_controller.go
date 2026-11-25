@@ -6,6 +6,7 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
@@ -92,6 +93,8 @@ func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Ru
 	if err := r.ensureOrphanedHelmChartsDeleted(ctx, revision); err != nil {
 		return ctrl.Result{}, lifecycle.Failed, err
 	}
+
+	r.setReferencedCondition(revision)
 
 	return ctrl.Result{}, lifecycle.Success, nil
 }
@@ -280,4 +283,33 @@ func (r *RevisionReconciler) ensureOrphanedHelmChartsDeleted(ctx context.Context
 		r.Recorder.Eventf(revision, nil, corev1.EventTypeNormal, "Deleted", "ReconcileRevision", "Deleted orphaned HelmChart %s", chart.Name)
 	}
 	return nil
+}
+
+// setReferencedCondition counts environment finalizers and sets the Referenced condition.
+func (r *RevisionReconciler) setReferencedCondition(revision *promotionv1alpha1.Revision) {
+	count := 0
+	for _, f := range revision.Finalizers {
+		if strings.HasPrefix(f, promotionv1alpha1.EnvironmentFinalizerPrefix) {
+			count++
+		}
+	}
+
+	var c metav1.Condition
+	if count > 0 {
+		c = metav1.Condition{
+			Type:    "Referenced",
+			Status:  metav1.ConditionTrue,
+			Reason:  "InUse",
+			Message: fmt.Sprintf("Pinned by %d Environment(s); protected from pruning", count),
+		}
+	} else {
+		c = metav1.Condition{
+			Type:    "Referenced",
+			Status:  metav1.ConditionFalse,
+			Reason:  "Unreferenced",
+			Message: "Not pinned by any Environment",
+		}
+	}
+	c.ObservedGeneration = revision.Generation
+	revision.SetCondition(c)
 }
