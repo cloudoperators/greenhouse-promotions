@@ -5,12 +5,18 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - greenhouse.sap
   resources:
   - clusters
   - plugins
-  - ""
-  - secrets
   verbs:
   - get
   - list
@@ -50,24 +56,6 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - promotion.cloudoperators.dev
-  resources:
-  - promotions
-  verbs:
-  - create
-  - get
-  - list
-  - watch
-- apiGroups:
-  - promotion.cloudoperators.dev
-  resources:
-  - revisions
-  verbs:
-  - get
-  - list
-  - update
-  - watch
 - apiGroups:
   - source.toolkit.fluxcd.io
   resources:

@@ -109,14 +109,6 @@ type EnvironmentReference struct {
 	Name string `json:"name"`
 }
 
-// RevisionReference references a single Revision in the same namespace.
-type RevisionReference struct {
-	// name of the referenced Revision.
-	// +kubebuilder:validation:MinLength=1
-	// +required
-	Name string `json:"name"`
-}
-
 // PromotionReference references a single Promotion in the same namespace.
 type PromotionReference struct {
 	// name of the referenced Promotion.

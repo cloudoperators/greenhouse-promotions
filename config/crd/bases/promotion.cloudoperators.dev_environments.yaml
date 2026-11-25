@@ -242,7 +242,7 @@ spec:
                   is currently on.
                 properties:
                   name:
-                    description: name of the referenced Revision.
+                    description: name of the Revision.
                     minLength: 1
                     type: string
                 required:
@@ -280,7 +280,7 @@ spec:
                       description: revision references the Revision for this rollout.
                       properties:
                         name:
-                          description: name of the referenced Revision.
+                          description: name of the Revision.
                           minLength: 1
                           type: string
                       required:
@@ -319,7 +319,7 @@ spec:
                   and is the machine-readable signal a downstream Environment reads via verifiedIn.
                 properties:
                   name:
-                    description: name of the referenced Revision.
+                    description: name of the Revision.
                     minLength: 1
                     type: string
                 required:
