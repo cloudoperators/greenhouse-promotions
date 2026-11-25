@@ -39,22 +39,6 @@ const (
 	RolloutPhaseFailed    RolloutPhase = "Failed"
 )
 
-// RevisionReference names a Revision in the namespace of the Rollout.
-type RevisionReference struct {
-	// name of the Revision.
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-}
-
-// PluginReference names a Plugin in the namespace of the Rollout.
-type PluginReference struct {
-	// name of the Plugin.
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-}
-
 // RolloutSpec defines the desired state of Rollout
 type RolloutSpec struct {
 	// revisionRef is the Revision the target Plugins move to.

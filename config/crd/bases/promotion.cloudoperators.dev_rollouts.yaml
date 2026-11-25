@@ -58,8 +58,7 @@ spec:
               pluginRefs:
                 description: pluginRefs are the Plugins that move to the Revision.
                 items:
-                  description: PluginReference names a Plugin in the namespace of
-                    the Rollout.
+                  description: PluginReference names a Plugin in the same namespace.
                   properties:
                     name:
                       description: name of the Plugin.

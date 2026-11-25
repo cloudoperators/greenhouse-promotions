@@ -126,15 +126,31 @@ spec:
               source:
                 description: |-
                   source selects which Revision this Environment should run. Exactly one of the
-                  nested fields must be set (one-of): newestFromSource (head of chain) or
+                  nested fields must be set (one-of): requestFromSource (head of chain) or
                   verifiedIn (downstream, gated behind an upstream Environment).
                 maxProperties: 1
                 minProperties: 1
                 properties:
-                  newestFromSource:
+                  requestFromSource:
                     description: |-
-                      newestFromSource tracks the Source directly: the Environment is a head of the
-                      chain and takes each version the Source freezes, in turn. Empty struct toggle.
+                      requestFromSource tracks the Source directly: the Environment is a head of the
+                      chain and takes versions the Source freezes according to its strategy.
+                    properties:
+                      strategy:
+                        default: Latest
+                        description: |-
+                          strategy decides which Revision from the Source's history the Environment
+                          adopts, and how it advances:
+                            - Latest:     always track the newest ready Revision, skipping intermediate
+                                          versions.
+                            - Sequential: start at the oldest ready Revision still in the Source's history
+                                          and advance one version at a time through every version, each
+                                          gated by Verified. (Replays the retained history window, not
+                                          literally all versions ever produced.)
+                        enum:
+                        - Latest
+                        - Sequential
+                        type: string
                     type: object
                   verifiedIn:
                     description: |-
@@ -252,23 +268,15 @@ spec:
                 description: history is the rollout history, newest-first, trimmed
                   to spec.maxHistory.
                 items:
-                  description: HistoryEntry is one rollout record.
+                  description: |-
+                    HistoryEntry is one rollout record, keyed on the Revision the Environment moved
+                    through. There is a single long-lived Rollout per Environment (mutated in place),
+                    so this is the per-Revision audit trail rather than the Rollout object itself.
                   properties:
                     enteredAt:
                       description: enteredAt is when this Revision became the target.
                       format: date-time
                       type: string
-                    promotion:
-                      description: promotion references the Promotion that executed
-                        the move.
-                      properties:
-                        name:
-                          description: name of the referenced Promotion.
-                          minLength: 1
-                          type: string
-                      required:
-                      - name
-                      type: object
                     result:
                       description: result is the outcome of this rollout.
                       enum:
@@ -299,8 +307,8 @@ spec:
                 format: int64
                 type: integer
               targets:
-                description: targets summarizes the Promotions this Environment owns
-                  and how many are ready.
+                description: targets summarizes the Rollout this Environment owns
+                  and its convergence.
                 properties:
                   ready:
                     description: ready is how many of those Promotions report Ready=True.
