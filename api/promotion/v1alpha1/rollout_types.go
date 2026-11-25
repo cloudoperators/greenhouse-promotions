@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 )
 
 // RevisionAnnotation is set on a Plugin and names the Revision it runs.
@@ -128,6 +130,18 @@ type Rollout struct {
 	// status defines the observed state of Rollout
 	// +optional
 	Status RolloutStatus `json:"status,omitzero"`
+}
+
+func (r *Rollout) GetConditions() []metav1.Condition {
+	return r.Status.Conditions
+}
+
+func (r *Rollout) SetCondition(condition metav1.Condition) {
+	r.Status.Conditions = kmeta.SetCondition(r.Status.Conditions, condition)
+}
+
+func (r *Rollout) GetReadyCondition() *metav1.Condition {
+	return kmeta.GetConditionByType(r.Status.Conditions, kmeta.ReadyCondition)
 }
 
 // +kubebuilder:object:root=true

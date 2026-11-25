@@ -26,6 +26,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	greenhousev1alpha1 "github.com/cloudoperators/greenhouse/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -53,6 +54,7 @@ func init() {
 	utilruntime.Must(helmv2.AddToScheme(scheme))
 	utilruntime.Must(sourcev1.AddToScheme(scheme))
 	utilruntime.Must(promotionv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(greenhousev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 }
