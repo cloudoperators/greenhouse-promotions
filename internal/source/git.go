@@ -1,10 +1,11 @@
 package source
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -87,7 +88,7 @@ func (c *gitClient) discoverSemver(refs []*plumbing.Reference) ([]Version, error
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("git source: no tags satisfy %q in %s", c.cfg.SemverConstraint, c.cfg.Repository)
 	}
-	sort.Slice(matches, func(i, j int) bool { return matches[i].ver.GreaterThan(matches[j].ver) })
+	slices.SortFunc(matches, func(a, b match) int { return b.ver.Compare(a.ver) })
 
 	out := make([]Version, len(matches))
 	for i, m := range matches {
@@ -121,12 +122,11 @@ func (c *gitClient) discoverTagPattern(refs []*plumbing.Reference) ([]Version, e
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("git source: no tags match %q in %s", c.cfg.TagPattern, c.cfg.Repository)
 	}
-	sort.Slice(matches, func(i, j int) bool {
-		a, b := matches[i], matches[j]
+	slices.SortFunc(matches, func(a, b match) int {
 		if a.ver != nil && b.ver != nil {
-			return a.ver.GreaterThan(b.ver)
+			return b.ver.Compare(a.ver)
 		}
-		return a.v.Version > b.v.Version
+		return cmp.Compare(b.v.Version, a.v.Version)
 	})
 
 	out := make([]Version, len(matches))
