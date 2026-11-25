@@ -27,6 +27,12 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+const (
+	// AnnotationRefresh forces an immediate reconcile when its value changes.
+	// The controller echoes the handled value into status.lastHandledRefresh.
+	AnnotationRefresh = "promotion.cloudoperators.dev/refresh"
+)
+
 // SourceSpec defines the desired state of Source
 type SourceSpec struct {
 	// Interval defines how often to reconcile the repository source
@@ -38,6 +44,13 @@ type SourceSpec struct {
 
 	// +kubebuilder:validation:XValidation:rule="has(self.oci) != has(self.git)",message="exactly one of oci or git must be set"
 	Source *ArtifactSource `json:"source"`
+
+	// DiscoveryLimit caps how many of the newest discovered versions are frozen
+	// into Revisions and reported in status, newest-first.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=5
+	// +optional
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty"`
 
 	// Overrides are the PluginDefinition overrides to be applied
 	// +Optional
@@ -115,14 +128,48 @@ type SecretKeyReference struct {
 
 // SourceStatus defines the observed state of Source.
 type SourceStatus struct {
+	// LastHandledRefresh is the value of the promotion.cloudoperators.dev/refresh
+	// annotation the controller last acted on (push trigger).
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty"`
+	// LastAttemptTime is when discovery last ran, regardless of outcome.
+	// +optional
+	LastAttemptTime *metav1.Time `json:"lastAttemptTime,omitempty"`
+	// LastChangeTime is when the resolved upstream ref last changed.
+	// +optional
+	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
+	// LatestRevisionName is the name of the newest Revision this Source created.
+	// +optional
+	LatestRevisionName string `json:"latestRevisionName,omitempty"`
+	// Revisions is the ordered (newest-first) list of Revisions this Source created.
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	Revisions []SourceRevision `json:"revisions,omitempty"`
 	// +listType=map
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// SourceRevision references one Revision resource this Source created.
+type SourceRevision struct {
+	// Name of the Revision resource.
+	Name string `json:"name"`
+	// Digest is the sha256 of the definition file the Revision was frozen from.
+	Digest string `json:"digest"`
+	// Ready mirrors the Revision's Ready condition (true once its chart is synced).
+	Ready bool `json:"ready"`
+	// CreatedAt is when the Revision was created.
+	CreatedAt metav1.Time `json:"createdAt"`
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Namespaced,shortName=src
+// +kubebuilder:printcolumn:name="Latest",type=string,JSONPath=`.status.latestRevisionName`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Source is the Schema for the sources API
 type Source struct {

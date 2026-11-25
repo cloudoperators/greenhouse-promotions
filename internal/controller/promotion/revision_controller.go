@@ -145,7 +145,11 @@ func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision 
 		if source != nil && source.Spec.Source != nil && source.Spec.Source.Oci != nil && source.Spec.Source.Oci.SecretRef != nil {
 			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Source.Oci.SecretRef.Name}
 		}
-		return controllerutil.SetControllerReference(revision, helmRepo, r.Scheme)
+		// The HelmRepository is shared across every Revision from the same repo URL,
+		// so it must not have a single controlling owner. Use a non-controller owner
+		// reference; a controller reference would let the first Revision claim it and
+		// make all others fail with "already owned by another controller".
+		return controllerutil.SetOwnerReference(revision, helmRepo, r.Scheme)
 	})
 	if err != nil {
 		log.Error(err, "Failed to reconcile HelmRepository", "name", helmRepo.Name)

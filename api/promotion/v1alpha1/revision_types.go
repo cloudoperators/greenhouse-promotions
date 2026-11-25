@@ -44,11 +44,11 @@ const (
 )
 
 // RevisionOption is a configurable option carried from the PluginDefinition.
-// Defaults here are pristine; overrides from spec.overrides are applied separately at consume time.
+// Defaults reflect the owning Source's overrides where they apply.
 type RevisionOption struct {
 	// Name of the option.
 	Name string `json:"name"`
-	// Default is the pristine default value from the upstream PluginDefinition.
+	// Default is the option's default value, after Source overrides are applied.
 	// +optional
 	Default *apiextensionsv1.JSON `json:"default,omitempty"`
 	// Description is a human-readable explanation of the option.
@@ -92,21 +92,13 @@ type RevisionDefinitionSpec struct {
 	Options []RevisionOption `json:"options,omitempty"`
 }
 
-// RevisionDefinition holds the pristine PluginDefinition body resolved from upstream.
-// Overrides are never merged into this field; they live in RevisionSpec.Overrides.
+// RevisionDefinition holds the PluginDefinition body resolved from upstream with
+// the owning Source's overrides already applied.
 type RevisionDefinition struct {
 	// Kind is "PluginDefinition" or "ClusterPluginDefinition".
 	Kind string `json:"kind"`
 	// Spec is the full PluginDefinition spec at the resolved ref.
 	Spec RevisionDefinitionSpec `json:"spec"`
-}
-
-// OptionOverride replaces the default value of a named option at consume time.
-type OptionOverride struct {
-	// Name matches a RevisionOption name in the definition.
-	Name string `json:"name"`
-	// Value replaces the option's default value.
-	Value *apiextensionsv1.JSON `json:"value"`
 }
 
 // RevisionSpec defines the desired state of Revision.
@@ -117,12 +109,9 @@ type RevisionSpec struct {
 	Ref string `json:"ref"`
 	// Digest is the sha256 of the definition file at spec.ref.
 	Digest string `json:"digest"`
-	// Definition holds the pristine, unmodified PluginDefinition resolved at spec.ref.
+	// Definition holds the resolved PluginDefinition at spec.ref, with the owning
+	// Source's overrides already applied.
 	Definition RevisionDefinition `json:"definition"`
-	// OptionOverrides are copied from the owning Source at creation time and applied at
-	// consume time by the promotions-server. Never merged into spec.definition.
-	// +optional
-	OptionOverrides []OptionOverride `json:"optionOverrides,omitempty"`
 }
 
 // RevisionHelmChartStatus records the Flux chart sync and mirroring outcome.

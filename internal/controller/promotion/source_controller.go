@@ -26,6 +26,7 @@ import (
 
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	"github.com/cloudoperators/greenhouse-promotions/internal/lifecycle"
+	sourcephase "github.com/cloudoperators/greenhouse-promotions/internal/phases/source"
 )
 
 // SourceReconciler reconciles a Source object
@@ -38,6 +39,8 @@ type SourceReconciler struct {
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=sources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=sources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=sources/finalizers,verbs=update
+// +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=revisions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -53,10 +56,19 @@ func (r *SourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 func (r *SourceReconciler) EnsureCreated(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
-	log := ctrl.LoggerFrom(ctx)
-	source := obj.(*promotionv1alpha1.Source)
-	log.Info("ensure source", "namespace", source.GetNamespace(), "name", source.GetName())
-	return ctrl.Result{}, lifecycle.Success, nil
+	src := obj.(*promotionv1alpha1.Source)
+	phase := &sourcephase.Phase{
+		Client: r.Client,
+		Scheme: r.Scheme,
+		Source: src,
+	}
+	routines := []lifecycle.SubRoutine{
+		phase.ResolveClient,
+		phase.Discover,
+		phase.CreateRevisions,
+		phase.ReconcileStatus,
+	}
+	return lifecycle.ExecuteSubRoutine(ctx, routines)
 }
 
 func (r *SourceReconciler) EnsureDeleted(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
@@ -75,6 +87,7 @@ func (r *SourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.recorder = mgr.GetEventRecorder("source-controller")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&promotionv1alpha1.Source{}).
+		Owns(&promotionv1alpha1.Revision{}).
 		Named("promotion-source").
 		Complete(r)
 }
