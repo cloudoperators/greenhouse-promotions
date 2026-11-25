@@ -14,6 +14,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -105,6 +106,12 @@ func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision 
 	log := log.FromContext(ctx)
 	repositoryURL := revision.Spec.Definition.Spec.HelmChart.Repository
 
+	source, err := r.getOwningSource(ctx, revision)
+	if err != nil {
+		log.Error(err, "Failed to get owning Source")
+		return nil, err
+	}
+
 	helmRepo := &sourcev1.HelmRepository{}
 	helmRepo.Name = flux.ChartURLToName(repositoryURL)
 	helmRepo.Namespace = revision.Namespace
@@ -115,6 +122,12 @@ func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision 
 		helmRepo.Spec.Interval = metav1.Duration{Duration: 24 * time.Hour}
 		if flux.CheckIfLocalRegistry(repositoryURL) {
 			helmRepo.Spec.Insecure = true
+		}
+		if source != nil && source.Spec.Git != nil && source.Spec.Git.SecretRef != nil {
+			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Git.SecretRef.Name}
+		}
+		if source != nil && source.Spec.Oci != nil && source.Spec.Oci.SecretRef != nil {
+			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Oci.SecretRef.Name}
 		}
 		return controllerutil.SetControllerReference(revision, helmRepo, r.Scheme)
 	})
@@ -133,6 +146,24 @@ func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision 
 	}
 
 	return helmRepo, nil
+}
+
+// getOwningSource returns the Source that owns this Revision via ownerReference, or nil if not found.
+func (r *RevisionReconciler) getOwningSource(ctx context.Context, revision *promotionv1alpha1.Revision) (*promotionv1alpha1.Source, error) {
+	for _, ref := range revision.OwnerReferences {
+		if ref.Kind != "Source" {
+			continue
+		}
+		source := &promotionv1alpha1.Source{}
+		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: revision.Namespace}, source); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		return source, nil
+	}
+	return nil, nil
 }
 
 // ensureHelmChart creates or updates the Flux HelmChart owned by this Revision and sets the HelmChartReady condition.

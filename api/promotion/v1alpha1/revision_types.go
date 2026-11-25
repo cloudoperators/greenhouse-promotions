@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	promotionsmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
+	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 )
 
 const (
@@ -190,12 +190,12 @@ func (r *Revision) GetConditions() []metav1.Condition {
 
 // SetCondition upserts a condition on the Revision.
 func (r *Revision) SetCondition(c metav1.Condition) {
-	r.Status.Conditions = promotionsmeta.SetCondition(r.Status.Conditions, c)
+	r.Status.Conditions = kmeta.SetCondition(r.Status.Conditions, c)
 }
 
 // GetReadyCondition returns the Ready condition, or nil.
 func (r *Revision) GetReadyCondition() *metav1.Condition {
-	return promotionsmeta.GetConditionByType(r.Status.Conditions, promotionsmeta.ReadyCondition)
+	return kmeta.GetConditionByType(r.Status.Conditions, kmeta.ReadyCondition)
 }
 
 // +kubebuilder:object:root=true
