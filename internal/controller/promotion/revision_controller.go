@@ -7,28 +7,20 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
-	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
-	"github.com/cloudoperators/greenhouse-promotions/internal/flux"
 	"github.com/cloudoperators/greenhouse-promotions/internal/lifecycle"
+	revisionphases "github.com/cloudoperators/greenhouse-promotions/internal/phases/revision"
 )
 
 const (
@@ -89,13 +81,14 @@ func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Ru
 		return ctrl.Result{}, lifecycle.Success, nil
 	}
 
-	helmRepo, err := r.ensureHelmRepository(ctx, revision)
-	if err != nil {
-		return ctrl.Result{}, lifecycle.Failed, err
+	p := &revisionphases.Phase{
+		Client:   r.Client,
+		Recorder: r.Recorder,
+		Revision: revision,
 	}
-
-	if err := r.ensureHelmChart(ctx, revision, helmRepo); err != nil {
-		return ctrl.Result{}, lifecycle.Failed, err
+	result, reconcileResult, err := lifecycle.ExecuteSubRoutine(ctx, p.EnsureCreatePhases())
+	if err != nil || reconcileResult == lifecycle.Failed {
+		return result, reconcileResult, err
 	}
 
 	r.setReferencedCondition(revision)
@@ -105,162 +98,13 @@ func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Ru
 	now := new(metav1.Now())
 	revision.Status.ResolvedAt = now
 
-	return ctrl.Result{}, lifecycle.Success, nil
+	return result, lifecycle.Success, nil
 }
 
+// EnsureDeleted implements lifecycle.Reconciler.
 func (r *RevisionReconciler) EnsureDeleted(_ context.Context, _ lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
 	// Owned resources are cleaned up automatically via owner references; nothing extra to do here.
 	return ctrl.Result{}, lifecycle.Success, nil
-}
-
-// ensureHelmRepository creates or updates the Flux HelmRepository owned by this Revision.
-func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision *promotionv1alpha1.Revision) (*sourcev1.HelmRepository, error) {
-	log := ctrllog.FromContext(ctx)
-	repositoryURL := revision.Spec.Definition.Spec.HelmChart.Repository
-
-	source, err := r.getOwningSource(ctx, revision)
-	if err != nil {
-		log.Error(err, "Failed to get owning Source")
-		return nil, err
-	}
-
-	helmRepo := &sourcev1.HelmRepository{}
-	helmRepo.Name = flux.ChartURLToName(repositoryURL)
-	helmRepo.Namespace = revision.Namespace
-
-	result, err := controllerutil.CreateOrUpdate(ctx, r.Client, helmRepo, func() error {
-		helmRepo.Spec.Type = flux.GetSourceRepositoryType(repositoryURL)
-		helmRepo.Spec.URL = repositoryURL
-		helmRepo.Spec.Interval = metav1.Duration{Duration: 24 * time.Hour}
-		if flux.CheckIfLocalRegistry(repositoryURL) {
-			helmRepo.Spec.Insecure = true
-		}
-		if source != nil && source.Spec.Source != nil && source.Spec.Source.Git != nil && source.Spec.Source.Git.SecretRef != nil {
-			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Source.Git.SecretRef.Name}
-		}
-		if source != nil && source.Spec.Source != nil && source.Spec.Source.Oci != nil && source.Spec.Source.Oci.SecretRef != nil {
-			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Source.Oci.SecretRef.Name}
-		}
-		// The HelmRepository is shared across every Revision from the same repo URL,
-		// so it must not have a single controlling owner. Use a non-controller owner
-		// reference; a controller reference would let the first Revision claim it and
-		// make all others fail with "already owned by another controller".
-		return controllerutil.SetOwnerReference(revision, helmRepo, r.Scheme)
-	})
-	if err != nil {
-		log.Error(err, "Failed to reconcile HelmRepository", "name", helmRepo.Name)
-		return nil, err
-	}
-
-	switch result {
-	case controllerutil.OperationResultCreated:
-		log.Info("Created HelmRepository", "name", helmRepo.Name)
-		r.Recorder.Eventf(revision, nil, corev1.EventTypeNormal, "Created", "ReconcileRevision", "Created HelmRepository %s", helmRepo.Name)
-	case controllerutil.OperationResultUpdated:
-		log.Info("Updated HelmRepository", "name", helmRepo.Name)
-		r.Recorder.Eventf(revision, nil, corev1.EventTypeNormal, "Updated", "ReconcileRevision", "Updated HelmRepository %s", helmRepo.Name)
-	}
-
-	return helmRepo, nil
-}
-
-// getOwningSource returns the Source that owns this Revision via ownerReference, or nil if not found.
-func (r *RevisionReconciler) getOwningSource(ctx context.Context, revision *promotionv1alpha1.Revision) (*promotionv1alpha1.Source, error) {
-	for _, ref := range revision.OwnerReferences {
-		if ref.Kind != "Source" {
-			continue
-		}
-		source := &promotionv1alpha1.Source{}
-		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: revision.Namespace}, source); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, nil
-			}
-			return nil, err
-		}
-		return source, nil
-	}
-	return nil, nil
-}
-
-// ensureHelmChart creates or updates the Flux HelmChart owned by this Revision and sets the HelmChartReady condition.
-func (r *RevisionReconciler) ensureHelmChart(ctx context.Context, revision *promotionv1alpha1.Revision, helmRepo *sourcev1.HelmRepository) error {
-	log := ctrllog.FromContext(ctx)
-	helmChartSpec := revision.Spec.Definition.Spec.HelmChart
-
-	helmChart := &sourcev1.HelmChart{}
-	helmChart.Name = revision.FluxHelmChartResourceName()
-	helmChart.Namespace = revision.Namespace
-
-	result, err := controllerutil.CreateOrUpdate(ctx, r.Client, helmChart, func() error {
-		labels := helmChart.GetLabels()
-		if labels == nil {
-			labels = make(map[string]string)
-		}
-		labels[promotionv1alpha1.RevisionLabelSource] = revision.Name
-		helmChart.SetLabels(labels)
-		helmChart.Spec = sourcev1.HelmChartSpec{
-			Chart:             helmChartSpec.Name,
-			Version:           helmChartSpec.Version,
-			Interval:          metav1.Duration{Duration: 24 * time.Hour},
-			ReconcileStrategy: sourcev1.ReconcileStrategyChartVersion,
-			SourceRef: sourcev1.LocalHelmChartSourceReference{
-				Kind: sourcev1.HelmRepositoryKind,
-				Name: helmRepo.Name,
-			},
-		}
-		return controllerutil.SetControllerReference(revision, helmChart, r.Scheme)
-	})
-	if err != nil {
-		log.Error(err, "Failed to reconcile HelmChart", "name", helmChart.Name)
-		return err
-	}
-
-	switch result {
-	case controllerutil.OperationResultCreated:
-		log.Info("Created HelmChart", "name", helmChart.Name)
-		r.Recorder.Eventf(revision, nil, corev1.EventTypeNormal, "Created", "ReconcileRevision", "Created HelmChart %s", helmChart.Name)
-	case controllerutil.OperationResultUpdated:
-		log.Info("Updated HelmChart", "name", helmChart.Name)
-		r.Recorder.Eventf(revision, nil, corev1.EventTypeNormal, "Updated", "ReconcileRevision", "Updated HelmChart %s", helmChart.Name)
-	}
-
-	// Re-fetch to read current Flux status and set HelmChartReady condition.
-	if err := r.Get(ctx, client.ObjectKeyFromObject(helmChart), helmChart); err != nil {
-		return err
-	}
-	r.setHelmChartReadyCondition(revision, helmChart)
-	return nil
-}
-
-// setHelmChartReadyCondition mirrors the Flux HelmChart Ready condition onto the Revision.
-func (r *RevisionReconciler) setHelmChartReadyCondition(revision *promotionv1alpha1.Revision, helmChart *sourcev1.HelmChart) {
-	readyCondition := meta.FindStatusCondition(helmChart.GetConditions(), fluxmeta.ReadyCondition)
-	var c metav1.Condition
-	switch {
-	case readyCondition == nil:
-		c = metav1.Condition{
-			Type:    conditionHelmChartReady,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "Pending",
-			Message: "HelmChart status pending",
-		}
-	case readyCondition.Status == metav1.ConditionTrue:
-		c = metav1.Condition{
-			Type:    conditionHelmChartReady,
-			Status:  metav1.ConditionTrue,
-			Reason:  readyCondition.Reason,
-			Message: readyCondition.Message,
-		}
-	default:
-		c = metav1.Condition{
-			Type:    conditionHelmChartReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  readyCondition.Reason,
-			Message: readyCondition.Message,
-		}
-	}
-	c.ObservedGeneration = revision.Generation
-	meta.SetStatusCondition(&revision.Status.Conditions, c)
 }
 
 // setReferencedCondition counts environment finalizers and sets the Referenced condition.
