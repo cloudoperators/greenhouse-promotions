@@ -23,12 +23,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	"github.com/cloudoperators/greenhouse-promotions/internal/flux"
 	"github.com/cloudoperators/greenhouse-promotions/internal/lifecycle"
+)
+
+const (
+	conditionHelmChartReady = "HelmChartReady"
+	conditionReferenced     = "Referenced"
 )
 
 // RevisionReconciler reconciles a Revision object.
@@ -114,7 +119,7 @@ func (r *RevisionReconciler) EnsureDeleted(_ context.Context, _ lifecycle.Runtim
 
 // ensureHelmRepository creates or updates the Flux HelmRepository owned by this Revision.
 func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision *promotionv1alpha1.Revision) (*sourcev1.HelmRepository, error) {
-	log := log.FromContext(ctx)
+	log := ctrllog.FromContext(ctx)
 	repositoryURL := revision.Spec.Definition.Spec.HelmChart.Repository
 
 	source, err := r.getOwningSource(ctx, revision)
@@ -179,7 +184,7 @@ func (r *RevisionReconciler) getOwningSource(ctx context.Context, revision *prom
 
 // ensureHelmChart creates or updates the Flux HelmChart owned by this Revision and sets the HelmChartReady condition.
 func (r *RevisionReconciler) ensureHelmChart(ctx context.Context, revision *promotionv1alpha1.Revision, helmRepo *sourcev1.HelmRepository) error {
-	log := log.FromContext(ctx)
+	log := ctrllog.FromContext(ctx)
 	helmChartSpec := revision.Spec.Definition.Spec.HelmChart
 
 	helmChart := &sourcev1.HelmChart{}
@@ -234,21 +239,21 @@ func (r *RevisionReconciler) setHelmChartReadyCondition(revision *promotionv1alp
 	switch {
 	case readyCondition == nil:
 		c = metav1.Condition{
-			Type:    "HelmChartReady",
+			Type:    conditionHelmChartReady,
 			Status:  metav1.ConditionUnknown,
 			Reason:  "Pending",
 			Message: "HelmChart status pending",
 		}
 	case readyCondition.Status == metav1.ConditionTrue:
 		c = metav1.Condition{
-			Type:    "HelmChartReady",
+			Type:    conditionHelmChartReady,
 			Status:  metav1.ConditionTrue,
 			Reason:  readyCondition.Reason,
 			Message: readyCondition.Message,
 		}
 	default:
 		c = metav1.Condition{
-			Type:    "HelmChartReady",
+			Type:    conditionHelmChartReady,
 			Status:  metav1.ConditionFalse,
 			Reason:  readyCondition.Reason,
 			Message: readyCondition.Message,
@@ -261,7 +266,7 @@ func (r *RevisionReconciler) setHelmChartReadyCondition(revision *promotionv1alp
 // ensureOrphanedHelmChartsDeleted deletes HelmCharts labelled with this Revision's name
 // whose name no longer matches the desired FluxHelmChartResourceName.
 func (r *RevisionReconciler) ensureOrphanedHelmChartsDeleted(ctx context.Context, revision *promotionv1alpha1.Revision) error {
-	log := log.FromContext(ctx)
+	log := ctrllog.FromContext(ctx)
 	currentName := revision.FluxHelmChartResourceName()
 
 	helmChartList := &sourcev1.HelmChartList{}
@@ -305,14 +310,14 @@ func (r *RevisionReconciler) setReferencedCondition(revision *promotionv1alpha1.
 	var c metav1.Condition
 	if count > 0 {
 		c = metav1.Condition{
-			Type:    "Referenced",
+			Type:    conditionReferenced,
 			Status:  metav1.ConditionTrue,
 			Reason:  "InUse",
 			Message: fmt.Sprintf("Pinned by %d Environment(s); protected from pruning", count),
 		}
 	} else {
 		c = metav1.Condition{
-			Type:    "Referenced",
+			Type:    conditionReferenced,
 			Status:  metav1.ConditionFalse,
 			Reason:  "Unreferenced",
 			Message: "Not pinned by any Environment",
@@ -324,7 +329,7 @@ func (r *RevisionReconciler) setReferencedCondition(revision *promotionv1alpha1.
 
 // setReadyCondition derives the Ready condition from HelmChartReady.
 func (r *RevisionReconciler) setReadyCondition(revision *promotionv1alpha1.Revision) {
-	helmChartReady := revision.GetConditionByType("HelmChartReady")
+	helmChartReady := revision.GetConditionByType(conditionHelmChartReady)
 	var c metav1.Condition
 	if helmChartReady == nil || helmChartReady.Status != metav1.ConditionTrue {
 		msg := "HelmChart not ready"
@@ -351,7 +356,7 @@ func (r *RevisionReconciler) setReadyCondition(revision *promotionv1alpha1.Revis
 
 // initializeConditions sets HelmChartReady and Referenced to Unknown at the start of each reconcile.
 func (r *RevisionReconciler) initializeConditions(revision *promotionv1alpha1.Revision) {
-	for _, t := range []string{"HelmChartReady", "Referenced"} {
+	for _, t := range []string{conditionHelmChartReady, conditionReferenced} {
 		revision.SetCondition(metav1.Condition{
 			Type:               t,
 			Status:             metav1.ConditionUnknown,
