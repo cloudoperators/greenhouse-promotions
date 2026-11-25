@@ -193,6 +193,13 @@ func main() {
 		setupLog.Error(err, "Failed to create controller", "controller", "promotion-source")
 		os.Exit(1)
 	}
+	if err := (&promotioncontroller.EnvironmentReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "promotion-environment")
+	}
+
 	if err := (&promotioncontroller.PromotionReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

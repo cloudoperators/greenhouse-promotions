@@ -1,0 +1,19 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Environment
+metadata:
+  labels:
+    app.kubernetes.io/name: greenhouse-promotions
+    app.kubernetes.io/managed-by: kustomize
+  name: environment-sample
+spec:
+  sourceRef:
+    name: cert-manager
+  clusterSelector:
+    matchLabels:
+      environment: canary
+  source:
+    newestFromSource: {}
+  gate:
+    soak: 30m
+    autoPromote: true
+  maxHistory: 10
