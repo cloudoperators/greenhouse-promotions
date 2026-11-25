@@ -123,6 +123,22 @@ var _ = Describe("Promotion server", func() {
 		}))
 	})
 
+	It("names the Flux resources of the Revision in the status", func() {
+		recorder := resolve(newClientBuilder().WithObjects(newRevision()).Build())
+
+		var resolved struct {
+			Status struct {
+				Flux struct {
+					HelmChart      string `json:"helmChart"`
+					HelmRepository string `json:"helmRepository"`
+				} `json:"flux"`
+			} `json:"status"`
+		}
+		Expect(json.NewDecoder(recorder.Body).Decode(&resolved)).To(Succeed())
+		Expect(resolved.Status.Flux.HelmChart).To(Equal(name))
+		Expect(resolved.Status.Flux.HelmRepository).To(Equal("ghcr-io-stefanprodan-charts"))
+	})
+
 	It("answers 404 when the Revision does not exist", func() {
 		recorder := resolve(newClientBuilder().Build())
 
