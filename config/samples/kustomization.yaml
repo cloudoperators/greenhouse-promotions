@@ -2,5 +2,5 @@
 resources:
 - promotion_v1alpha1_source.yaml
 - promotion_v1alpha1_environment.yaml
-- promotion_v1alpha1_promotion.yaml
+- promotion_v1alpha1_rollout.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

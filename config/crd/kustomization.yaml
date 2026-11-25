@@ -4,7 +4,7 @@
 resources:
 - bases/promotion.cloudoperators.dev_sources.yaml
 - bases/promotion.cloudoperators.dev_environments.yaml
-- bases/promotion.cloudoperators.dev_promotions.yaml
+- bases/promotion.cloudoperators.dev_rollouts.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
