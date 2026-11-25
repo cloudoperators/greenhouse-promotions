@@ -7,6 +7,8 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	promotionsmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 )
 
 const (
@@ -179,6 +181,21 @@ type Revision struct {
 // The Revision name already encodes source and version (e.g. cert-manager-1-20-1).
 func (r *Revision) FluxHelmChartResourceName() string {
 	return r.Name
+}
+
+// GetConditions returns the Revision's status conditions.
+func (r *Revision) GetConditions() []metav1.Condition {
+	return r.Status.Conditions
+}
+
+// SetCondition upserts a condition on the Revision.
+func (r *Revision) SetCondition(c metav1.Condition) {
+	r.Status.Conditions = promotionsmeta.SetCondition(r.Status.Conditions, c)
+}
+
+// GetReadyCondition returns the Ready condition, or nil.
+func (r *Revision) GetReadyCondition() *metav1.Condition {
+	return promotionsmeta.GetConditionByType(r.Status.Conditions, promotionsmeta.ReadyCondition)
 }
 
 // +kubebuilder:object:root=true

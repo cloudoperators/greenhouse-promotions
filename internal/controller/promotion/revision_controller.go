@@ -25,6 +25,7 @@ import (
 
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	"github.com/cloudoperators/greenhouse-promotions/internal/flux"
+	"github.com/cloudoperators/greenhouse-promotions/internal/lifecycle"
 )
 
 // RevisionReconciler reconciles a Revision object.
@@ -60,30 +61,43 @@ func (r *RevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// GetEventRecorder implements lifecycle.Reconciler.
+func (r *RevisionReconciler) GetEventRecorder() events.EventRecorder {
+	return r.Recorder
+}
+
+// Reconcile is the main reconciliation entry point; delegates to lifecycle.Reconcile.
 func (r *RevisionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	revision := &promotionv1alpha1.Revision{}
-	if err := r.Get(ctx, req.NamespacedName, revision); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+	return lifecycle.Reconcile(ctx, r.Client, req.NamespacedName, &promotionv1alpha1.Revision{}, r)
+}
+
+// EnsureCreated implements lifecycle.Reconciler and runs all creation/update phases.
+func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
+	revision := obj.(*promotionv1alpha1.Revision)
 
 	if revision.Spec.Definition.Spec.HelmChart == nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, lifecycle.Success, nil
 	}
 
 	helmRepo, err := r.ensureHelmRepository(ctx, revision)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, lifecycle.Failed, err
 	}
 
 	if err := r.ensureHelmChart(ctx, revision, helmRepo); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, lifecycle.Failed, err
 	}
 
 	if err := r.ensureOrphanedHelmChartsDeleted(ctx, revision); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, lifecycle.Failed, err
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, lifecycle.Success, nil
+}
+
+func (r *RevisionReconciler) EnsureDeleted(_ context.Context, _ lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
+	// Owned resources are cleaned up automatically via owner references; nothing extra to do here.
+	return ctrl.Result{}, lifecycle.Success, nil
 }
 
 // ensureHelmRepository creates or updates the Flux HelmRepository owned by this Revision.
