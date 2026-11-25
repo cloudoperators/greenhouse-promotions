@@ -99,8 +99,6 @@ var _ = Describe("Promotion server", func() {
 	It("serves the Revision as a PluginDefinition", func() {
 		pluginDefinition := resolvePluginDefinition(newRevision())
 
-		Expect(pluginDefinition.APIVersion).To(Equal("greenhouse.sap/v1alpha1"))
-		Expect(pluginDefinition.Kind).To(Equal("PluginDefinition"))
 		Expect(pluginDefinition.Name).To(Equal(name))
 		Expect(pluginDefinition.Namespace).To(Equal(namespace))
 		Expect(pluginDefinition.Spec).To(Equal(greenhousev1alpha1.PluginDefinitionSpec{

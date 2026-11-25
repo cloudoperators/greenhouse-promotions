@@ -22,7 +22,6 @@ import (
 
 	greenhousev1alpha1 "github.com/cloudoperators/greenhouse/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -60,13 +59,9 @@ func NewHandler(reader client.Reader) http.Handler {
 }
 
 func pluginDefinitionFor(revision *promotionv1alpha1.Revision) (*greenhousev1alpha1.PluginDefinition, error) {
-	pluginDefinition := &greenhousev1alpha1.PluginDefinition{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: greenhousev1alpha1.GroupVersion.String(),
-			Kind:       revision.Spec.Definition.Kind,
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: revision.Name, Namespace: revision.Namespace},
-	}
+	pluginDefinition := &greenhousev1alpha1.PluginDefinition{}
+	pluginDefinition.SetName(revision.Name)
+	pluginDefinition.SetNamespace(revision.Namespace)
 
 	spec, err := json.Marshal(revision.Spec.Definition.Spec)
 	if err != nil {
