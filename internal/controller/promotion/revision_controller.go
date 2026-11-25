@@ -134,11 +134,11 @@ func (r *RevisionReconciler) ensureHelmRepository(ctx context.Context, revision 
 		if flux.CheckIfLocalRegistry(repositoryURL) {
 			helmRepo.Spec.Insecure = true
 		}
-		if source != nil && source.Spec.Git != nil && source.Spec.Git.SecretRef != nil {
-			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Git.SecretRef.Name}
+		if source != nil && source.Spec.Source != nil && source.Spec.Source.Git != nil && source.Spec.Source.Git.SecretRef != nil {
+			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Source.Git.SecretRef.Name}
 		}
-		if source != nil && source.Spec.Oci != nil && source.Spec.Oci.SecretRef != nil {
-			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Oci.SecretRef.Name}
+		if source != nil && source.Spec.Source != nil && source.Spec.Source.Oci != nil && source.Spec.Source.Oci.SecretRef != nil {
+			helmRepo.Spec.SecretRef = &fluxmeta.LocalObjectReference{Name: source.Spec.Source.Oci.SecretRef.Name}
 		}
 		return controllerutil.SetControllerReference(revision, helmRepo, r.Scheme)
 	})
