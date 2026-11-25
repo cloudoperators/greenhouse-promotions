@@ -20,17 +20,19 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
+	"github.com/cloudoperators/greenhouse-promotions/internal/lifecycle"
 )
 
 // SourceReconciler reconciles a Source object
 type SourceReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	recorder events.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=promotion.cloudoperators.dev,resources=sources,verbs=get;list;watch;create;update;patch;delete
@@ -47,15 +49,30 @@ type SourceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.25.0/pkg/reconcile
 func (r *SourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	return lifecycle.Reconcile(ctx, r.Client, req.NamespacedName, &promotionv1alpha1.Source{}, r)
+}
 
-	// TODO(user): your logic here
+func (r *SourceReconciler) EnsureCreated(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
+	log := ctrl.LoggerFrom(ctx)
+	source := obj.(*promotionv1alpha1.Source)
+	log.Info("ensure source", "namespace", source.GetNamespace(), "name", source.GetName())
+	return ctrl.Result{}, lifecycle.Success, nil
+}
 
-	return ctrl.Result{}, nil
+func (r *SourceReconciler) EnsureDeleted(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
+	log := ctrl.LoggerFrom(ctx)
+	source := obj.(*promotionv1alpha1.Source)
+	log.Info("ensure source", "namespace", source.GetNamespace(), "name", source.GetName())
+	return ctrl.Result{}, lifecycle.Success, nil
+}
+
+func (r *SourceReconciler) GetEventRecorder() events.EventRecorder {
+	return r.recorder
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.recorder = mgr.GetEventRecorder("source-controller")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&promotionv1alpha1.Source{}).
 		Named("promotion-source").

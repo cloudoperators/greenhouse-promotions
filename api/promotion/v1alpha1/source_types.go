@@ -20,13 +20,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // SourceSpec defines the desired state of Source
-// +kubebuilder:validation:ExactlyOneOf=git;oci
 type SourceSpec struct {
 	// Interval defines how often to reconcile the repository source
 	// +kubebuilder:validation:Type=string
@@ -34,14 +35,55 @@ type SourceSpec struct {
 	// +kubebuilder:default="1h"
 	// +Optional
 	Interval *metav1.Duration `json:"interval,omitempty"`
-	// +Optional
-	Git *GitRepository `json:"git,omitempty"`
-	// +Optional
-	Oci *OciRegistry `json:"oci,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="has(self.oci) != has(self.git)",message="exactly one of oci or git must be set"
+	Source *ArtifactSource `json:"source"`
 
 	// Overrides are the PluginDefinition overrides to be applied
 	// +Optional
 	Override Override `json:"override,omitempty"`
+}
+
+// ArtifactSource indicates the artifact source type, either Git or OCI. Exactly one of Git or OCI must be set.
+type ArtifactSource struct {
+	// +Optional
+	Git *GitSource `json:"git,omitempty"`
+	// +Optional
+	Oci *OCISource `json:"oci,omitempty"`
+}
+
+// GitSource indicates the Git source type, either a tag pattern or semverConstraint should be provided
+type GitSource struct {
+	URL  string `json:"url"`
+	Path string `json:"path"`
+	// SemverConstraint discovers tags satisfying a semver range (e.g. ">=1.14.0").
+	// +optional
+	SemverConstraint string `json:"semverConstraint,omitempty"`
+	// TagPattern discovers tags matching a glob (e.g. perses/*).
+	// +optional
+	TagPattern string `json:"tagPattern,omitempty"`
+	// Branch tracks the newest commit on a branch (e.g. main).
+	// +optional
+	SecretRef *SecretKeyReference `json:"secretRef,omitempty"`
+}
+
+type OCISource struct {
+	URL string `json:"url"`
+	// SemverConstraint discovers tags satisfying a semver range (e.g. ">=1.14.0").
+	// +optional
+	SemverConstraint string         `json:"semverConstraint,omitempty"`
+	SecretRef        *SecretRef     `json:"secretRef,omitempty"`
+	LayerSelector    *LayerSelector `json:"layerSelector,omitempty"`
+}
+
+// LayerSelector identifies a specific layer within an OCI artifact.
+type LayerSelector struct {
+	MediaType string `json:"mediaType,omitempty"`
+}
+
+// SecretRef references a secret by name in the same namespace.
+type SecretRef struct {
+	Name string `json:"name"`
 }
 
 type Override struct {
@@ -63,35 +105,6 @@ type OptionsOverride struct {
 	Value *apiextensionsv1.JSON `json:"value"`
 }
 
-type OciRegistry struct {
-	URL           string         `json:"url"`
-	Ref           *OciReference  `json:"ref"`
-	SecretRef     *SecretRef     `json:"secretRef,omitempty"`
-	LayerSelector *LayerSelector `json:"layerSelector,omitempty"`
-}
-
-// SecretRef references a secret by name in the same namespace.
-type SecretRef struct {
-	Name string `json:"name"`
-}
-
-// OciReference specifies a version to resolve from an OCI registry.
-type OciReference struct {
-	Semver string `json:"semver,omitempty"`
-}
-
-// LayerSelector identifies a specific layer within an OCI artifact.
-type LayerSelector struct {
-	MediaType string `json:"mediaType,omitempty"`
-}
-
-type GitRepository struct {
-	URL       string              `json:"url"`
-	Path      string              `json:"path"`
-	Ref       *Reference          `json:"ref"`
-	SecretRef *SecretKeyReference `json:"secretRef,omitempty"`
-}
-
 // SecretKeyReference specifies the secret and key containing the value.
 type SecretKeyReference struct {
 	// Name of the secret in the same namespace.
@@ -100,29 +113,8 @@ type SecretKeyReference struct {
 	Key string `json:"key"`
 }
 
-// Reference contains the tag to resolve PluginDefinitions from
-type Reference struct {
-	// Tag is the semver tag to resolve PluginDefinitions
-	Tag string `json:"tag"`
-}
-
 // SourceStatus defines the observed state of Source.
 type SourceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
-	// conditions represent the current state of the Source resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
 	// +listType=map
 	// +listMapKey=type
 	// +optional
@@ -156,6 +148,18 @@ type SourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
 	Items           []Source `json:"items"`
+}
+
+func (s *Source) GetConditions() []metav1.Condition {
+	return s.Status.Conditions
+}
+
+func (s *Source) SetCondition(condition metav1.Condition) {
+	s.Status.Conditions = kmeta.SetCondition(s.Status.Conditions, condition)
+}
+
+func (s *Source) GetReadyCondition() *metav1.Condition {
+	return kmeta.GetConditionByType(s.Status.Conditions, kmeta.ReadyCondition)
 }
 
 func init() {

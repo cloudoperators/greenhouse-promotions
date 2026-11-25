@@ -2,9 +2,10 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/promotion.cloudoperators.dev_sources.yaml
-- bases/promotion.cloudoperators.dev_environments.yaml
-- bases/promotion.cloudoperators.dev_rollouts.yaml
+  - bases/promotion.cloudoperators.dev_sources.yaml
+  - bases/promotion.cloudoperators.dev_environments.yaml
+  - bases/promotion.cloudoperators.dev_rollouts.yaml
+  - bases/promotion.cloudoperators.dev_revisions.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
