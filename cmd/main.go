@@ -57,6 +57,8 @@ func init() {
 	utilruntime.Must(helmv2.AddToScheme(scheme))
 	utilruntime.Must(sourcev1.AddToScheme(scheme))
 	utilruntime.Must(promotionv1alpha1.AddToScheme(scheme))
+	// The Environment controller reads greenhouse Clusters and Plugins to resolve
+	// a Rollout's target plugins from spec.clusterSelector.
 	utilruntime.Must(greenhousev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 

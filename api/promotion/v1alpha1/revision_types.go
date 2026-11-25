@@ -192,6 +192,16 @@ func (r *Revision) GetConditionByType(t string) *metav1.Condition {
 	return kmeta.GetConditionByType(r.Status.Conditions, kmeta.ConditionType(t))
 }
 
+// IsReady reports whether the Revision's Ready condition is True, i.e. its
+// definition has been resolved and materialized.
+//
+// TODO: once the Revision controller emits OCIReplicationReady (chart mirrored),
+// require that condition True here too — a half-mirrored Revision must not promote.
+func (r *Revision) IsReady() bool {
+	c := r.GetReadyCondition()
+	return c != nil && c.Status == metav1.ConditionTrue
+}
+
 // +kubebuilder:object:root=true
 
 // RevisionList contains a list of Revision.

@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	kmeta "github.com/cloudoperators/greenhouse-promotions/api/meta"
 )
 
 // HistoryResult is the outcome recorded for a rollout history entry.
@@ -59,7 +61,7 @@ type EnvironmentSpec struct {
 	ClusterSelector metav1.LabelSelector `json:"clusterSelector"`
 
 	// source selects which Revision this Environment should run. Exactly one of the
-	// nested fields must be set (one-of): newestFromSource (head of chain) or
+	// nested fields must be set (one-of): requestFromSource (head of chain) or
 	// verifiedIn (downstream, gated behind an upstream Environment).
 	// +required
 	Source EnvironmentSource `json:"source"`
@@ -75,22 +77,14 @@ type EnvironmentSpec struct {
 	MaxHistory int32 `json:"maxHistory,omitempty"`
 }
 
-// SourceReference references a Source in the same namespace.
-type SourceReference struct {
-	// name of the referenced Source.
-	// +kubebuilder:validation:MinLength=1
-	// +required
-	Name string `json:"name"`
-}
-
 // EnvironmentSource is a one-of selecting the Revision to run.
 // +kubebuilder:validation:MaxProperties=1
 // +kubebuilder:validation:MinProperties=1
 type EnvironmentSource struct {
-	// newestFromSource tracks the Source directly: the Environment is a head of the
-	// chain and takes each version the Source freezes, in turn. Empty struct toggle.
+	// requestFromSource tracks the Source directly: the Environment is a head of the
+	// chain and takes versions the Source freezes according to its strategy.
 	// +optional
-	NewestFromSource *NewestFromSource `json:"newestFromSource,omitempty"`
+	RequestFromSource *RequestFromSource `json:"requestFromSource,omitempty"`
 
 	// verifiedIn gates this Environment behind an upstream Environment: it only runs
 	// a Revision once that upstream has marked it Verified. A single reference.
@@ -98,32 +92,42 @@ type EnvironmentSource struct {
 	VerifiedIn *EnvironmentReference `json:"verifiedIn,omitempty"`
 }
 
-// NewestFromSource is an empty toggle selecting head-of-chain behavior.
-type NewestFromSource struct{}
-
-// EnvironmentReference references a single Environment in the same namespace.
-type EnvironmentReference struct {
-	// name of the referenced Environment.
-	// +kubebuilder:validation:MinLength=1
-	// +required
-	Name string `json:"name"`
+// RequestFromSource selects head-of-chain behavior: the Environment tracks the
+// Source directly.
+type RequestFromSource struct {
+	// strategy decides which Revision from the Source's history the Environment
+	// adopts, and how it advances:
+	//   - Latest:     always track the newest ready Revision, skipping intermediate
+	//                 versions.
+	//   - Sequential: start at the oldest ready Revision still in the Source's history
+	//                 and advance one version at a time through every version, each
+	//                 gated by Verified. (Replays the retained history window, not
+	//                 literally all versions ever produced.)
+	// +kubebuilder:validation:Enum=Latest;Sequential
+	// +kubebuilder:default=Latest
+	// +optional
+	Strategy RolloutStrategy `json:"strategy,omitempty"`
 }
 
-// PromotionReference references a single Promotion in the same namespace.
-type PromotionReference struct {
-	// name of the referenced Promotion.
-	// +kubebuilder:validation:MinLength=1
-	// +required
-	Name string `json:"name"`
-}
+// RolloutStrategy selects how a requestFromSource Environment picks and advances
+// Revisions from the Source's history.
+type RolloutStrategy string
+
+const (
+	// StrategyLatest always tracks the newest ready Revision.
+	StrategyLatest RolloutStrategy = "Latest"
+	// StrategySequential starts at the oldest ready Revision in the history and
+	// advances one version at a time after each is Verified.
+	StrategySequential RolloutStrategy = "Sequential"
+)
 
 // Gate is the health gate that decides when the current Revision is Verified.
 //
-// Readiness is observed through the Promotion the Environment owns: the Promotion's
+// Readiness is observed through the Rollout the Environment owns: the Rollout's
 // Ready condition means its target Plugins have retargeted and converged. The gate
-// passes once the Environment's Promotions are ready (status.targets.ready == total)
-// and stay so for the soak duration. The Environment does not inspect Plugins itself;
-// because it pins a single Revision at a time (~1:1), readiness is all-or-nothing.
+// passes once the Rollout is Ready and has stayed so for the soak duration. The
+// Environment does not inspect Plugins itself; because it pins a single Revision at a
+// time (~1:1), readiness is all-or-nothing.
 type Gate struct {
 	// soak is how long the cohort must stay continuously healthy after converging
 	// before the Revision is marked Verified. A Go duration (e.g. "30m", "2h").
@@ -155,7 +159,7 @@ type EnvironmentStatus struct {
 	// +optional
 	VerifiedRevision *RevisionReference `json:"verifiedRevision,omitempty"`
 
-	// targets summarizes the Promotions this Environment owns and how many are ready.
+	// targets summarizes the Rollout this Environment owns and its convergence.
 	// +optional
 	Targets EnvironmentTargets `json:"targets,omitzero"`
 
@@ -190,15 +194,13 @@ type EnvironmentTargets struct {
 	Ready int32 `json:"ready,omitempty"`
 }
 
-// HistoryEntry is one rollout record.
+// HistoryEntry is one rollout record, keyed on the Revision the Environment moved
+// through. There is a single long-lived Rollout per Environment (mutated in place),
+// so this is the per-Revision audit trail rather than the Rollout object itself.
 type HistoryEntry struct {
 	// revision references the Revision for this rollout.
 	// +optional
 	Revision *RevisionReference `json:"revision,omitempty"`
-
-	// promotion references the Promotion that executed the move.
-	// +optional
-	Promotion *PromotionReference `json:"promotion,omitempty"`
 
 	// enteredAt is when this Revision became the target.
 	// +optional
@@ -251,4 +253,22 @@ func init() {
 		s.AddKnownTypes(SchemeGroupVersion, &Environment{}, &EnvironmentList{})
 		return nil
 	})
+}
+
+// GetConditions returns the Environment's status conditions.
+// Implements lifecycle.RuntimeObject.
+func (e *Environment) GetConditions() []metav1.Condition {
+	return e.Status.Conditions
+}
+
+// SetCondition upserts a status condition on the Environment.
+// Implements lifecycle.RuntimeObject.
+func (e *Environment) SetCondition(c metav1.Condition) {
+	e.Status.Conditions = kmeta.SetCondition(e.Status.Conditions, c)
+}
+
+// GetReadyCondition returns the Ready condition, or nil if unset.
+// Implements lifecycle.RuntimeObject.
+func (e *Environment) GetReadyCondition() *metav1.Condition {
+	return kmeta.GetConditionByType(e.Status.Conditions, kmeta.ReadyCondition)
 }
