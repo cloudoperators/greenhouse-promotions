@@ -21,41 +21,36 @@ import (
 	"net/http"
 
 	greenhousev1alpha1 "github.com/cloudoperators/greenhouse/api/v1alpha1"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 )
 
-const resolvePattern = "GET /apis/promotion.cloudoperators.dev/v1alpha1/namespaces/{namespace}/revisions/{name}/resolve"
+const resolvePath = "/apis/promotion.cloudoperators.dev/v1alpha1/namespaces/:namespace/revisions/:name/resolve"
 
 func NewHandler(reader client.Reader) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc(resolvePattern, func(w http.ResponseWriter, r *http.Request) {
+	e := echo.New()
+	e.Use(middleware.Recover())
+	e.GET(resolvePath, func(c echo.Context) error {
 		revision := &promotionv1alpha1.Revision{}
-		key := client.ObjectKey{Namespace: r.PathValue("namespace"), Name: r.PathValue("name")}
-		if err := reader.Get(r.Context(), key, revision); err != nil {
-			status := http.StatusInternalServerError
+		key := client.ObjectKey{Namespace: c.Param("namespace"), Name: c.Param("name")}
+		if err := reader.Get(c.Request().Context(), key, revision); err != nil {
 			if apierrors.IsNotFound(err) {
-				status = http.StatusNotFound
+				return echo.NewHTTPError(http.StatusNotFound, err.Error())
 			}
-			http.Error(w, err.Error(), status)
-			return
+			return err
 		}
 
 		pluginDefinition, err := pluginDefinitionFor(revision)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return err
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(pluginDefinition); err != nil {
-			log.FromContext(r.Context()).Error(err, "Failed to write the PluginDefinition", "revision", key)
-		}
+		return c.JSON(http.StatusOK, pluginDefinition)
 	})
-	return mux
+	return e
 }
 
 func pluginDefinitionFor(revision *promotionv1alpha1.Revision) (*greenhousev1alpha1.PluginDefinition, error) {

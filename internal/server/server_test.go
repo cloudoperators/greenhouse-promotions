@@ -127,7 +127,7 @@ var _ = Describe("Promotion server", func() {
 		recorder := resolve(newClientBuilder().Build())
 
 		Expect(recorder).To(HaveHTTPStatus(http.StatusNotFound))
-		Expect(recorder).To(HaveHTTPBody(ContainSubstring(`"` + name + `" not found`)))
+		Expect(recorder).To(HaveHTTPBody(ContainSubstring(name)))
 	})
 
 })
