@@ -66,13 +66,10 @@ func (r *RolloutReconciler) EnsureDeleted(_ context.Context, _ lifecycle.Runtime
 
 func (r *RolloutReconciler) EnsureCreated(ctx context.Context, object lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
 	rollout := object.(*promotionv1alpha1.Rollout)
-	if isFinished(rollout) {
-		return ctrl.Result{}, reconcileResult(rollout), nil
-	}
-
 	now := metav1.Now()
-	if rollout.Status.StartedAt == nil {
+	if previous := rollout.GetReadyCondition(); previous == nil || previous.ObservedGeneration != rollout.Generation {
 		rollout.Status.StartedAt = &now
+		rollout.Status.FinishedAt = nil
 	}
 	rollout.Status.Actor = rolloutActor
 
@@ -103,7 +100,10 @@ func (r *RolloutReconciler) EnsureCreated(ctx context.Context, object lifecycle.
 	}
 	ready.Reason = string(rollout.Status.Phase)
 	rollout.SetCondition(ready)
-	if isFinished(rollout) {
+	switch {
+	case !isFinished(rollout):
+		rollout.Status.FinishedAt = nil
+	case rollout.Status.FinishedAt == nil:
 		rollout.Status.FinishedAt = &now
 	}
 
@@ -168,9 +168,6 @@ func (r *RolloutReconciler) rolloutsForPlugin(ctx context.Context, plugin client
 	var requests []reconcile.Request
 	for i := range rollouts.Items {
 		rollout := &rollouts.Items[i]
-		if isFinished(rollout) {
-			continue
-		}
 		references := slices.ContainsFunc(rollout.Spec.PluginRefs, func(ref promotionv1alpha1.PluginReference) bool {
 			return ref.Name == plugin.GetName()
 		})

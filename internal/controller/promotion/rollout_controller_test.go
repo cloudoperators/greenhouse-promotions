@@ -17,6 +17,8 @@ limitations under the License.
 package promotion
 
 import (
+	"time"
+
 	greenhousemetav1alpha1 "github.com/cloudoperators/greenhouse/api/meta/v1alpha1"
 	greenhousev1alpha1 "github.com/cloudoperators/greenhouse/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -73,6 +75,22 @@ var _ = Describe("Rollout Controller", func() {
 		for _, pluginName := range pluginNames {
 			rollout.Spec.PluginRefs = append(rollout.Spec.PluginRefs, promotionv1alpha1.PluginReference{Name: pluginName})
 		}
+		return rollout
+	}
+
+	newFinishedRollout := func(generation, observedGeneration int64, finishedAt metav1.Time) *promotionv1alpha1.Rollout {
+		rollout := newRollout("promo", "podinfo-a")
+		rollout.Generation = generation
+		rollout.Status.Phase = promotionv1alpha1.RolloutPhaseSucceeded
+		rollout.Status.StartedAt = &finishedAt
+		rollout.Status.FinishedAt = &finishedAt
+		rollout.Status.Conditions = []metav1.Condition{{
+			Type:               promotionv1alpha1.RolloutReadyCondition,
+			Status:             metav1.ConditionTrue,
+			Reason:             string(promotionv1alpha1.RolloutPhaseSucceeded),
+			ObservedGeneration: observedGeneration,
+			LastTransitionTime: finishedAt,
+		}}
 		return rollout
 	}
 
@@ -179,15 +197,27 @@ var _ = Describe("Rollout Controller", func() {
 		Expect(stampedRevision("podinfo-a")).To(BeEmpty())
 	})
 
-	It("leaves the Plugins alone once it has finished", func() {
-		finished := newRollout("promo", "podinfo-a")
-		finished.Status.Phase = promotionv1alpha1.RolloutPhaseSucceeded
-		setup(newPlugin("podinfo-a", "podinfo-7-0-0", true), finished)
+	It("moves the Plugins to a new revision after it has finished", func() {
+		finishedAt := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+		setup(newPlugin("podinfo-a", "podinfo-6-8-0", true), newFinishedRollout(2, 1, finishedAt))
 
 		rollout := reconcileRollout("promo")
 
-		Expect(stampedRevision("podinfo-a")).To(Equal("podinfo-7-0-0"))
+		Expect(stampedRevision("podinfo-a")).To(Equal(revision))
+		Expect(rollout.Status.Phase).To(Equal(promotionv1alpha1.RolloutPhaseRunning))
+		Expect(rollout.Status.StartedAt.After(finishedAt.Time)).To(BeTrue())
+		Expect(rollout.Status.FinishedAt).To(BeNil())
+	})
+
+	It("keeps its timestamps while nothing changes", func() {
+		finishedAt := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
+		setup(newPlugin("podinfo-a", revision, true), newFinishedRollout(1, 1, finishedAt))
+
+		rollout := reconcileRollout("promo")
+
 		Expect(rollout.Status.Phase).To(Equal(promotionv1alpha1.RolloutPhaseSucceeded))
+		Expect(rollout.Status.StartedAt.Time).To(BeTemporally("==", finishedAt.Time))
+		Expect(rollout.Status.FinishedAt.Time).To(BeTemporally("==", finishedAt.Time))
 	})
 
 	It("lets a deleted Rollout go", func() {
@@ -204,7 +234,7 @@ var _ = Describe("Rollout Controller", func() {
 		Expect(apierrors.IsNotFound(fakeClient.Get(ctx, key, &promotionv1alpha1.Rollout{}))).To(BeTrue())
 	})
 
-	It("enqueues the unfinished Rollouts that reference a changed Plugin", func() {
+	It("enqueues the Rollouts that reference a changed Plugin", func() {
 		finished := newRollout("finished", "podinfo-a")
 		finished.Status.Phase = promotionv1alpha1.RolloutPhaseFailed
 		setup(
@@ -215,8 +245,9 @@ var _ = Describe("Rollout Controller", func() {
 
 		requests := reconciler.rolloutsForPlugin(ctx, newPlugin("podinfo-a", "", true))
 
-		Expect(requests).To(ConsistOf(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: "running", Namespace: namespace},
-		}))
+		Expect(requests).To(ConsistOf(
+			reconcile.Request{NamespacedName: types.NamespacedName{Name: "running", Namespace: namespace}},
+			reconcile.Request{NamespacedName: types.NamespacedName{Name: "finished", Namespace: namespace}},
+		))
 	})
 })
