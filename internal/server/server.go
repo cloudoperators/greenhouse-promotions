@@ -70,13 +70,5 @@ func pluginDefinitionFor(revision *promotionv1alpha1.Revision) (*greenhousev1alp
 	if err := json.Unmarshal(spec, &pluginDefinition.Spec); err != nil {
 		return nil, err
 	}
-
-	for _, override := range revision.Spec.OptionOverrides {
-		for i := range pluginDefinition.Spec.Options {
-			if pluginDefinition.Spec.Options[i].Name == override.Name {
-				pluginDefinition.Spec.Options[i].Default = override.Value
-			}
-		}
-	}
 	return pluginDefinition, nil
 }

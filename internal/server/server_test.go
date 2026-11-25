@@ -123,19 +123,6 @@ var _ = Describe("Promotion server", func() {
 		}))
 	})
 
-	It("serves the option overrides as defaults", func() {
-		revision := newRevision()
-		revision.Spec.OptionOverrides = []promotionv1alpha1.OptionOverride{
-			{Name: option, Value: &apiextensionsv1.JSON{Raw: []byte("3")}},
-		}
-
-		pluginDefinition := resolvePluginDefinition(revision)
-
-		Expect(pluginDefinition.Spec.Options).To(HaveLen(2))
-		Expect(pluginDefinition.Spec.Options[0].Default).To(Equal(&apiextensionsv1.JSON{Raw: []byte("3")}))
-		Expect(pluginDefinition.Spec.Options[1].Default).To(BeNil())
-	})
-
 	It("answers 404 when the Revision does not exist", func() {
 		recorder := resolve(newClientBuilder().Build())
 
