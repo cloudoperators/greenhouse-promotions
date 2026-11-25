@@ -3,7 +3,6 @@ package lifecycle
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,7 +21,7 @@ type ReconcileResult string
 type conditionReason string
 
 const (
-	commonCleanupFinalizer = "krate.cloudoperators.dev/cleanup"
+	commonCleanupFinalizer = "promotion.cloudoperators.dev/cleanup"
 
 	createdReason         conditionReason = "Created"
 	pendingCreationReason conditionReason = "PendingCreation"
@@ -63,8 +62,6 @@ type Reconciler interface {
 // Reconcile is the generic reconciliation entry point.
 // It handles finalizer lifecycle, deletion, and creation phases, then patches status.
 func Reconcile(ctx context.Context, kubeClient client.Client, namespacedName types.NamespacedName, runtimeObject RuntimeObject, reconciler Reconciler) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx)
-
 	if err := kubeClient.Get(ctx, namespacedName, runtimeObject); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -90,9 +87,9 @@ func Reconcile(ctx context.Context, kubeClient client.Client, namespacedName typ
 		if isResourceDeleted(runtimeObject) {
 			return ctrl.Result{}, client.IgnoreNotFound(removeFinalizer(ctx, kubeClient, runtimeObject, commonCleanupFinalizer))
 		}
-		result, err = ensureDeleted(ctx, logger, reconciler, runtimeObject)
+		result, err = ensureDeleted(ctx, reconciler, runtimeObject)
 	} else {
-		result, err = ensureCreated(ctx, logger, reconciler, runtimeObject)
+		result, err = ensureCreated(ctx, reconciler, runtimeObject)
 	}
 
 	return result, patchStatus(ctx, kubeClient, runtimeObject, err)
@@ -119,8 +116,8 @@ func eventTypeFor(r ReconcileResult, err error) string {
 }
 
 // ensureCreated invokes EnsureCreated and applies status conditions.
-func ensureCreated(ctx context.Context, logger logr.Logger, reconciler Reconciler, o RuntimeObject) (ctrl.Result, error) {
-	logger.Info("ensure created")
+func ensureCreated(ctx context.Context, reconciler Reconciler, o RuntimeObject) (ctrl.Result, error) {
+	ctrl.LoggerFrom(ctx).Info("ensure created")
 	result, reconcileResult, err := reconciler.EnsureCreated(ctx, o)
 	setupCreateState(o, reconcileResult, err)
 	recorder := GetEventRecorderFromContext(ctx)
@@ -129,8 +126,8 @@ func ensureCreated(ctx context.Context, logger logr.Logger, reconciler Reconcile
 }
 
 // ensureDeleted invokes EnsureDeleted and applies delete conditions.
-func ensureDeleted(ctx context.Context, logger logr.Logger, reconciler Reconciler, o RuntimeObject) (ctrl.Result, error) {
-	logger.Info("ensure deleted")
+func ensureDeleted(ctx context.Context, reconciler Reconciler, o RuntimeObject) (ctrl.Result, error) {
+	ctrl.LoggerFrom(ctx).Info("ensure deleted")
 	setupDeleteState(o, Pending, nil)
 	result, reconcileResult, err := reconciler.EnsureDeleted(ctx, o)
 	setupDeleteState(o, reconcileResult, err)
