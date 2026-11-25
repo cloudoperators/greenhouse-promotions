@@ -24,20 +24,20 @@ import (
 // RevisionAnnotation is set on a Plugin and names the Revision it runs.
 const RevisionAnnotation = "promotion.cloudoperators.dev/revision"
 
-// PromotionReadyCondition is True once every target Plugin runs the Revision.
-const PromotionReadyCondition = "Ready"
+// RolloutReadyCondition is True once every target Plugin runs the Revision.
+const RolloutReadyCondition = "Ready"
 
-// PromotionPhase is where a Promotion stands.
+// RolloutPhase is where a Rollout stands.
 // +kubebuilder:validation:Enum=Running;Succeeded;Failed
-type PromotionPhase string
+type RolloutPhase string
 
 const (
-	PromotionPhaseRunning   PromotionPhase = "Running"
-	PromotionPhaseSucceeded PromotionPhase = "Succeeded"
-	PromotionPhaseFailed    PromotionPhase = "Failed"
+	RolloutPhaseRunning   RolloutPhase = "Running"
+	RolloutPhaseSucceeded RolloutPhase = "Succeeded"
+	RolloutPhaseFailed    RolloutPhase = "Failed"
 )
 
-// RevisionReference names a Revision in the namespace of the Promotion.
+// RevisionReference names a Revision in the namespace of the Rollout.
 type RevisionReference struct {
 	// name of the Revision.
 	// +required
@@ -45,7 +45,7 @@ type RevisionReference struct {
 	Name string `json:"name"`
 }
 
-// PluginReference names a Plugin in the namespace of the Promotion.
+// PluginReference names a Plugin in the namespace of the Rollout.
 type PluginReference struct {
 	// name of the Plugin.
 	// +required
@@ -53,9 +53,9 @@ type PluginReference struct {
 	Name string `json:"name"`
 }
 
-// PromotionSpec defines the desired state of Promotion
+// RolloutSpec defines the desired state of Rollout
 // +kubebuilder:validation:XValidation:rule="self == oldSelf",message="spec is immutable"
-type PromotionSpec struct {
+type RolloutSpec struct {
 	// revisionRef is the Revision the target Plugins move to.
 	// +required
 	RevisionRef RevisionReference `json:"revisionRef"`
@@ -68,8 +68,8 @@ type PromotionSpec struct {
 	PluginRefs []PluginReference `json:"pluginRefs"`
 }
 
-// PromotionTargets counts the target Plugins.
-type PromotionTargets struct {
+// RolloutTargets counts the target Plugins.
+type RolloutTargets struct {
 	// selected is the number of Plugins in spec.pluginRefs.
 	Selected int32 `json:"selected"`
 
@@ -77,29 +77,29 @@ type PromotionTargets struct {
 	Converged int32 `json:"converged"`
 }
 
-// PromotionStatus defines the observed state of Promotion.
-type PromotionStatus struct {
-	// phase is where the Promotion stands. Succeeded and Failed are final.
+// RolloutStatus defines the observed state of Rollout.
+type RolloutStatus struct {
+	// phase is where the Rollout stands. Succeeded and Failed are final.
 	// +optional
-	Phase PromotionPhase `json:"phase,omitempty"`
+	Phase RolloutPhase `json:"phase,omitempty"`
 
-	// startedAt is when the controller picked up the Promotion.
+	// startedAt is when the controller picked up the Rollout.
 	// +optional
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// finishedAt is when the Promotion reached a final phase.
+	// finishedAt is when the Rollout reached a final phase.
 	// +optional
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 
-	// actor is who carried out the Promotion.
+	// actor is who carried out the Rollout.
 	// +optional
 	Actor string `json:"actor,omitempty"`
 
 	// targets counts the target Plugins.
 	// +optional
-	Targets *PromotionTargets `json:"targets,omitempty"`
+	Targets *RolloutTargets `json:"targets,omitempty"`
 
-	// conditions represent the current state of the Promotion resource.
+	// conditions represent the current state of the Rollout resource.
 	// +listType=map
 	// +listMapKey=type
 	// +optional
@@ -114,35 +114,35 @@ type PromotionStatus struct {
 // +kubebuilder:printcolumn:name="Converged",type=integer,JSONPath=`.status.targets.converged`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// Promotion is the Schema for the promotions API
-type Promotion struct {
+// Rollout is the Schema for the rollouts API
+type Rollout struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is a standard object metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
-	// spec defines the desired state of Promotion
+	// spec defines the desired state of Rollout
 	// +required
-	Spec PromotionSpec `json:"spec"`
+	Spec RolloutSpec `json:"spec"`
 
-	// status defines the observed state of Promotion
+	// status defines the observed state of Rollout
 	// +optional
-	Status PromotionStatus `json:"status,omitzero"`
+	Status RolloutStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// PromotionList contains a list of Promotion
-type PromotionList struct {
+// RolloutList contains a list of Rollout
+type RolloutList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []Promotion `json:"items"`
+	Items           []Rollout `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(func(s *runtime.Scheme) error {
-		s.AddKnownTypes(SchemeGroupVersion, &Promotion{}, &PromotionList{})
+		s.AddKnownTypes(SchemeGroupVersion, &Rollout{}, &RolloutList{})
 		return nil
 	})
 }

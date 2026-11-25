@@ -22,9 +22,12 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the greenhouse-promotions itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- promotion_promotion_admin_role.yaml
-- promotion_promotion_editor_role.yaml
-- promotion_promotion_viewer_role.yaml
+- promotion_environment_admin_role.yaml
+- promotion_environment_editor_role.yaml
+- promotion_environment_viewer_role.yaml
+- promotion_rollout_admin_role.yaml
+- promotion_rollout_editor_role.yaml
+- promotion_rollout_viewer_role.yaml
 - promotion_source_admin_role.yaml
 - promotion_source_editor_role.yaml
 - promotion_source_viewer_role.yaml

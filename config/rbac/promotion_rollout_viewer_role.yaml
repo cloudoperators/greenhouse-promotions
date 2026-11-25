@@ -11,12 +11,12 @@ metadata:
   labels:
     app.kubernetes.io/name: greenhouse-promotions
     app.kubernetes.io/managed-by: kustomize
-  name: promotion-promotion-viewer-role
+  name: promotion-rollout-viewer-role
 rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
-  - promotions
+  - rollouts
   verbs:
   - get
   - list
@@ -24,6 +24,6 @@ rules:
 - apiGroups:
   - promotion.cloudoperators.dev
   resources:
-  - promotions/status
+  - rollouts/status
   verbs:
   - get

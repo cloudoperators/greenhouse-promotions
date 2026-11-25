@@ -193,11 +193,18 @@ func main() {
 		setupLog.Error(err, "Failed to create controller", "controller", "promotion-source")
 		os.Exit(1)
 	}
-	if err := (&promotioncontroller.PromotionReconciler{
+	if err := (&promotioncontroller.EnvironmentReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "Failed to create controller", "controller", "promotion-promotion")
+		setupLog.Error(err, "Failed to create controller", "controller", "promotion-environment")
+	}
+
+	if err := (&promotioncontroller.RolloutReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "promotion-rollout")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

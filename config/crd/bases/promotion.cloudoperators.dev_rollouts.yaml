@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.22.0
-  name: promotions.promotion.cloudoperators.dev
+  name: rollouts.promotion.cloudoperators.dev
 spec:
   group: promotion.cloudoperators.dev
   names:
-    kind: Promotion
-    listKind: PromotionList
-    plural: promotions
-    singular: promotion
+    kind: Rollout
+    listKind: RolloutList
+    plural: rollouts
+    singular: rollout
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -33,7 +33,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Promotion is the Schema for the promotions API
+        description: Rollout is the Schema for the rollouts API
         properties:
           apiVersion:
             description: |-
@@ -53,13 +53,13 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of Promotion
+            description: spec defines the desired state of Rollout
             properties:
               pluginRefs:
                 description: pluginRefs are the Plugins that move to the Revision.
                 items:
                   description: PluginReference names a Plugin in the namespace of
-                    the Promotion.
+                    the Rollout.
                   properties:
                     name:
                       description: name of the Plugin.
@@ -91,13 +91,13 @@ spec:
             - message: spec is immutable
               rule: self == oldSelf
           status:
-            description: status defines the observed state of Promotion
+            description: status defines the observed state of Rollout
             properties:
               actor:
-                description: actor is who carried out the Promotion.
+                description: actor is who carried out the Rollout.
                 type: string
               conditions:
-                description: conditions represent the current state of the Promotion
+                description: conditions represent the current state of the Rollout
                   resource.
                 items:
                   description: Condition contains details for one aspect of the current
@@ -158,11 +158,11 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               finishedAt:
-                description: finishedAt is when the Promotion reached a final phase.
+                description: finishedAt is when the Rollout reached a final phase.
                 format: date-time
                 type: string
               phase:
-                description: phase is where the Promotion stands. Succeeded and Failed
+                description: phase is where the Rollout stands. Succeeded and Failed
                   are final.
                 enum:
                 - Running
@@ -170,7 +170,7 @@ spec:
                 - Failed
                 type: string
               startedAt:
-                description: startedAt is when the controller picked up the Promotion.
+                description: startedAt is when the controller picked up the Rollout.
                 format: date-time
                 type: string
               targets:

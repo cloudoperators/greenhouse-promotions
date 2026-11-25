@@ -1,10 +1,10 @@
 apiVersion: promotion.cloudoperators.dev/v1alpha1
-kind: Promotion
+kind: Rollout
 metadata:
   labels:
     app.kubernetes.io/name: greenhouse-promotions
     app.kubernetes.io/managed-by: kustomize
-  name: promotion-sample
+  name: rollout-sample
 spec:
   revisionRef:
     name: podinfo-6-9-0
