@@ -55,7 +55,7 @@ var _ = Describe("Source Controller", func() {
 						Namespace: resourceNamespace,
 					},
 					Spec: promotionv1alpha1.SourceSpec{
-						Git: &promotionv1alpha1.GitRepository{
+						Git: &promotionv1alpha1.GitSource{
 							URL:  "https://github.com/cloudoperators/greenhouse-extensions",
 							Path: "/",
 							Ref:  &promotionv1alpha1.Reference{Tag: "v1.0.0"},

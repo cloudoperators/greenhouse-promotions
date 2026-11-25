@@ -39,78 +39,12 @@ spec:
           spec:
             description: spec defines the desired state of Source
             properties:
-              git:
-                properties:
-                  path:
-                    type: string
-                  ref:
-                    description: Reference contains the tag to resolve PluginDefinitions
-                      from
-                    properties:
-                      tag:
-                        description: Tag is the semver tag to resolve PluginDefinitions
-                        type: string
-                    required:
-                    - tag
-                    type: object
-                  secretRef:
-                    description: SecretKeyReference specifies the secret and key containing
-                      the value.
-                    properties:
-                      key:
-                        description: Key in the secret to select the value from.
-                        type: string
-                      name:
-                        description: Name of the secret in the same namespace.
-                        type: string
-                    required:
-                    - key
-                    - name
-                    type: object
-                  url:
-                    type: string
-                required:
-                - path
-                - ref
-                - url
-                type: object
               interval:
                 default: 1h
                 description: Interval defines how often to reconcile the repository
                   source
                 pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
                 type: string
-              oci:
-                properties:
-                  layerSelector:
-                    description: LayerSelector identifies a specific layer within
-                      an OCI artifact.
-                    properties:
-                      mediaType:
-                        type: string
-                    type: object
-                  ref:
-                    description: OciReference specifies a version to resolve from
-                      an OCI registry.
-                    properties:
-                      semver:
-                        type: string
-                    type: object
-                  secretRef:
-                    description: SecretRef references a secret by name in the same
-                      namespace.
-                    properties:
-                      name:
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  url:
-                    type: string
-                required:
-                - ref
-                - url
-                type: object
               override:
                 description: Overrides are the PluginDefinition overrides to be applied
                 properties:
@@ -138,24 +72,82 @@ spec:
                       .spec.helmChart.repository
                     type: string
                 type: object
+              source:
+                description: ArtifactSource indicates the artifact source type, either
+                  Git or OCI. Exactly one of Git or OCI must be set.
+                properties:
+                  git:
+                    description: GitSource indicates the Git source type, either a
+                      tag pattern or semverConstraint should be provided
+                    properties:
+                      path:
+                        type: string
+                      secretRef:
+                        description: Branch tracks the newest commit on a branch (e.g.
+                          main).
+                        properties:
+                          key:
+                            description: Key in the secret to select the value from.
+                            type: string
+                          name:
+                            description: Name of the secret in the same namespace.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      semverConstraint:
+                        description: SemverConstraint discovers tags satisfying a
+                          semver range (e.g. ">=1.14.0").
+                        type: string
+                      tagPattern:
+                        description: TagPattern discovers tags matching a glob (e.g.
+                          perses/*).
+                        type: string
+                      url:
+                        type: string
+                    required:
+                    - path
+                    - url
+                    type: object
+                  oci:
+                    properties:
+                      layerSelector:
+                        description: LayerSelector identifies a specific layer within
+                          an OCI artifact.
+                        properties:
+                          mediaType:
+                            type: string
+                        type: object
+                      secretRef:
+                        description: SecretRef references a secret by name in the
+                          same namespace.
+                        properties:
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      semverConstraint:
+                        description: SemverConstraint discovers tags satisfying a
+                          semver range (e.g. ">=1.14.0").
+                        type: string
+                      url:
+                        type: string
+                    required:
+                    - url
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: exactly one of oci or git must be set
+                  rule: has(self.oci) != has(self.git)
+            required:
+            - source
             type: object
-            x-kubernetes-validations:
-            - message: exactly one of the fields in [git oci] must be set
-              rule: (has(self.git)?1:0)+(has(self.oci)?1:0) == 1
           status:
             description: status defines the observed state of Source
             properties:
               conditions:
-                description: |-
-                  conditions represent the current state of the Source resource.
-                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
-
-                  Standard condition types include:
-                  - "Available": the resource is fully functional
-                  - "Progressing": the resource is being created or updated
-                  - "Degraded": the resource failed to reach or maintain its desired state
-
-                  The status of each condition is one of True, False, or Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.

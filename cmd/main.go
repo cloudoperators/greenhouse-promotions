@@ -21,6 +21,7 @@ import (
 	"flag"
 	"os"
 
+	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -35,6 +36,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2"
+
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	promotioncontroller "github.com/cloudoperators/greenhouse-promotions/internal/controller/promotion"
 	// +kubebuilder:scaffold:imports
@@ -47,9 +50,11 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	utilruntime.Must(helmv2.AddToScheme(scheme))
+	utilruntime.Must(sourcev1.AddToScheme(scheme))
 	utilruntime.Must(promotionv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
 }
 
 // nolint:gocyclo

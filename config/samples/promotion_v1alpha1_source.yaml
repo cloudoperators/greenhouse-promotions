@@ -6,4 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: source-sample
 spec:
-  # TODO(user): Add fields here
+  interval: 1h
+  source:
+    git:
+      url: https://github.com/cloudoperators/greenhouse-extensions
+      path: cert-manager/plugindefinition.yaml
+      tagPattern: cert-manager/*
