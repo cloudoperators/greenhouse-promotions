@@ -1,0 +1,28 @@
+apiVersion: greenhouse.sap/v1alpha1
+kind: PluginPreset
+metadata:
+  name: perses-k8s-admin
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster-type: k8s-admin
+  plugin:
+    pluginDefinitionRef:
+      kind: PluginDefinition
+      name: perses
+    displayName: Perses
+    releaseName: perses
+    releaseNamespace: perses
+    optionValues:
+      - name: perses.serviceMonitor.selfMonitor
+        value: false
+      - name: perses.sidecar.allNamespaces
+        value: false
+      - name: perses.sidecar.enabled
+        value: true
+      - name: global.greenhouse.organizationName
+        value: greenhouse
+      - name: global.greenhouse.baseDomain
+        value: greenhouse.global.cloud.sap
+      - name: global.greenhouse.ownedBy
+        value: observability

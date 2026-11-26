@@ -1,0 +1,17 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Environment
+metadata:
+  name: cert-manager-canary
+spec:
+  sourceRef:
+    name: cert-manager
+  clusterSelector:
+    matchLabels:
+      environment: canary
+  environment:
+    requestFromSource:
+      strategy: Latest
+  gate:
+    soak: 10s
+    autoPromote: true
+  maxHistory: 5

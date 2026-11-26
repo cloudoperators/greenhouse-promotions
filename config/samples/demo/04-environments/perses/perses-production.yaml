@@ -1,0 +1,16 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Environment
+metadata:
+  name: perses-production
+spec:
+  sourceRef:
+    name: perses
+  clusterSelector:
+    matchLabels:
+      environment: production
+  environment:
+    verifiedIn:
+      name: perses-canary
+  gate:
+    autoPromote: true
+  maxHistory: 5

@@ -1,0 +1,16 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Environment
+metadata:
+  name: podinfo-production
+spec:
+  sourceRef:
+    name: podinfo
+  clusterSelector:
+    matchLabels:
+      environment: production
+  environment:
+    verifiedIn:
+      name: podinfo-canary
+  gate:
+    autoPromote: true
+  maxHistory: 5

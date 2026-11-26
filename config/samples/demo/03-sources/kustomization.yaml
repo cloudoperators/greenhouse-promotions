@@ -1,0 +1,6 @@
+namespace: demo
+
+resources:
+  - cert-manager.yaml
+  - perses.yaml
+  - podinfo.yaml

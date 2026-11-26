@@ -1,0 +1,24 @@
+apiVersion: greenhouse.sap/v1alpha1
+kind: PluginPreset
+metadata:
+  name: cert-manager-k8s-management
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster-type: k8s-management
+  plugin:
+    pluginDefinitionRef:
+      kind: PluginDefinition
+      name: cert-manager
+    displayName: Certificate manager
+    releaseName: cert-manager
+    releaseNamespace: cert-manager
+    optionValues:
+      - name: cert-manager.installCRDs
+        value: false
+      - name: cert-manager.prometheus.enabled
+        value: true
+      - name: cert-manager.webhook.timeoutSeconds
+        value: 15
+      - name: cert-manager.extraArgs[0]
+        value: "--enable-certificate-owner-ref=true"

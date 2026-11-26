@@ -1,0 +1,12 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Source
+metadata:
+  name: cert-manager
+spec:
+  interval: 1h
+  discoveryLimit: 5
+  source:
+    git:
+      url: https://github.com/cloudoperators/greenhouse-extensions
+      path: cert-manager/plugindefinition.yaml
+      tagPattern: cert-manager/*

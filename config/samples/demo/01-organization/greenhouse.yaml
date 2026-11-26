@@ -1,0 +1,7 @@
+apiVersion: greenhouse.sap/v1alpha1
+kind: Organization
+metadata:
+  name: greenhouse
+spec:
+  description: Greenhouse Organization
+  mappedOrgAdminIdPGroup: GREENHOUSE_ORG_ADMIN

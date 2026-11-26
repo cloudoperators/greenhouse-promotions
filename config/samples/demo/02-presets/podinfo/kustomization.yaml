@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: demo
+
+resources:
+  - podinfo-k8s-admin.yaml
+  - podinfo-k8s-management.yaml
+  - podinfo-k8s-runtime.yaml
