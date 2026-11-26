@@ -1,0 +1,59 @@
+apiVersion: greenhouse.sap/v1alpha1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+spec:
+  version: 1.20.0
+  displayName: Certificate manager
+  description: Automated TLS certificate management
+  docMarkDownUrl: https://raw.githubusercontent.com/cloudoperators/greenhouse-extensions/main/cert-manager/README.md
+  icon: https://raw.githubusercontent.com/cert-manager/cert-manager/master/logo/logo.png
+  helmChart:
+    name: cert-manager
+    repository: oci://quay.io/jetstack/charts
+    version: 1.20.0
+  options:
+    - name: cert-manager.prometheus.enabled
+      description: Whether to enable Prometheus metrics
+      default: true
+      required: false
+      type: bool
+    - name: cert-manager.extraArgs[0]
+      displayName: Enable certificate owner reference
+      description: Whether to add the owner reference to each certificate
+      default: "--enable-certificate-owner-ref=true"
+      required: false
+      type: string
+    - name: cert-manager.ingressShim.defaultIssuerName
+      displayName: Enable certificate owner reference
+      description: Name of the cert-manager issuer to use for TLS certificates
+      required: false
+      type: string
+    - name: cert-manager.ingressShim.defaultIssuerKind
+      description: Kind of the cert-manager issuer to use for TLS certificates
+      required: false
+      type: string
+    - name: cert-manager.ingressShim.defaultIssuerGroup
+      description: Group of the cert-manager issuer to use for TLS certificates
+      required: false
+      type: string
+    - name: cert-manager.webhook.timeoutSeconds
+      description: Timeout in seconds for the CertManager webhook
+      default: 15
+      required: false
+      type: int
+    - name: cert-manager.config.enableGatewayAPI
+      description: Whether to enable Gateway API support in cert-manager
+      default: false
+      required: false
+      type: bool
+    - name: cert-manager.config.enableGatewayAPIListenerSet
+      description: Whether to enable Gateway API ListenerSet support in cert-manager
+      default: false
+      required: false
+      type: bool
+    - name: cert-manager.config.featureGates.ListenerSets
+      description: Whether to enable the ListenerSets feature gate in cert-manager
+      default: true
+      required: false
+      type: bool
