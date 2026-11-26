@@ -67,7 +67,11 @@ func (r *SourceReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Runt
 		phase.EnsureRevisions(src),
 		phase.EnsureStatus(src),
 	}
-	return lifecycle.ExecuteSubRoutine(ctx, routines)
+	result, reconcileResult, err := lifecycle.ExecuteSubRoutine(ctx, routines)
+	if err == nil && result.RequeueAfter == 0 {
+		result.RequeueAfter = src.Spec.Interval.Duration
+	}
+	return result, reconcileResult, err
 }
 
 func (r *SourceReconciler) EnsureDeleted(ctx context.Context, obj lifecycle.RuntimeObject) (ctrl.Result, lifecycle.ReconcileResult, error) {
