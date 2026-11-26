@@ -44,6 +44,7 @@ import (
 	promotionv1alpha1 "github.com/cloudoperators/greenhouse-promotions/api/promotion/v1alpha1"
 	promotioncontroller "github.com/cloudoperators/greenhouse-promotions/internal/controller/promotion"
 	"github.com/cloudoperators/greenhouse-promotions/internal/server"
+	promotionwebhook "github.com/cloudoperators/greenhouse-promotions/internal/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -222,6 +223,11 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	if err := promotionwebhook.SetupRevisionWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create webhook", "webhook", "revision")
+		os.Exit(1)
+	}
 
 	if err := mgr.Add(&manager.Server{
 		Name:   "promotion",
