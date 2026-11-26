@@ -112,18 +112,20 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
 
+.PHONY: action-build
+action-build: ## Build the manager binary for container images (stripped, honours GOOS/GOARCH/CGO_ENABLED).
+	go build -ldflags "-s -w" -o bin/manager ./cmd/
+
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
-# (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
+# (i.e. make docker-build PLATFORM=linux/amd64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
-# Override BASE_IMAGE to build from another registry, e.g.
-# make docker-build IMG=<img> BASE_IMAGE=docker.io/library/golang:1.26
 .PHONY: docker-build
-docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build $(if $(BASE_IMAGE),--build-arg BASE_IMAGE=$(BASE_IMAGE)) -t ${IMG} .
+docker-build: ## Build docker image with the manager. Pass PLATFORM=linux/amd64 to cross-build.
+	$(CONTAINER_TOOL) build $(if $(PLATFORM),--platform=$(PLATFORM)) -t ${IMG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -135,14 +137,14 @@ docker-push: ## Push docker image with the manager.
 # - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 # - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
 # To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
-PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+PLATFORMS ?= linux/amd64
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name greenhouse-promotions-builder
 	$(CONTAINER_TOOL) buildx use greenhouse-promotions-builder
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) $(if $(BASE_IMAGE),--build-arg BASE_IMAGE=$(BASE_IMAGE)) --tag ${IMG} -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
 	- $(CONTAINER_TOOL) buildx rm greenhouse-promotions-builder
 	rm Dockerfile.cross
 
@@ -172,6 +174,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && "$(KUSTOMIZE)" edit set image controller=${IMG}
 	"$(KUSTOMIZE)" build config/default | "$(KUBECTL)" apply -f -
+	cd config/manager && "$(KUSTOMIZE)" edit set image controller=controller:latest
+
 
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -206,7 +210,7 @@ ENVTEST_K8S_VERSION ?= $(shell v='$(call gomodver,k8s.io/api)'; \
   [ -n "$$v" ] || { echo "Set ENVTEST_K8S_VERSION manually (k8s.io/api replace has no tag)" >&2; exit 1; }; \
   printf '%s\n' "$$v" | sed -E 's/^v?[0-9]+\.([0-9]+).*/1.\1/')
 
-GOLANGCI_LINT_VERSION ?= v2.13.1
+GOLANGCI_LINT_VERSION ?= v2.15.0
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)

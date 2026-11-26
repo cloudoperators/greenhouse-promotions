@@ -98,16 +98,12 @@ func (r *RevisionReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Ru
 		return ctrl.Result{}, lifecycle.Failed, err
 	}
 
-	if err := r.ensureOrphanedHelmChartsDeleted(ctx, revision); err != nil {
-		return ctrl.Result{}, lifecycle.Failed, err
-	}
-
 	r.setReferencedCondition(revision)
 	r.setReadyCondition(revision)
 
 	revision.Status.Version = revision.Spec.Definition.Spec.Version
-	now := metav1.Now()
-	revision.Status.ResolvedAt = &now
+	now := new(metav1.Now())
+	revision.Status.ResolvedAt = now
 
 	return ctrl.Result{}, lifecycle.Success, nil
 }
@@ -265,41 +261,6 @@ func (r *RevisionReconciler) setHelmChartReadyCondition(revision *promotionv1alp
 	}
 	c.ObservedGeneration = revision.Generation
 	meta.SetStatusCondition(&revision.Status.Conditions, c)
-}
-
-// ensureOrphanedHelmChartsDeleted deletes HelmCharts labelled with this Revision's name
-// whose name no longer matches the desired FluxHelmChartResourceName.
-func (r *RevisionReconciler) ensureOrphanedHelmChartsDeleted(ctx context.Context, revision *promotionv1alpha1.Revision) error {
-	log := ctrllog.FromContext(ctx)
-	currentName := revision.FluxHelmChartResourceName()
-
-	helmChartList := &sourcev1.HelmChartList{}
-	if err := r.List(ctx, helmChartList,
-		client.InNamespace(revision.Namespace),
-		client.MatchingLabels{promotionv1alpha1.RevisionLabelSource: revision.Name},
-	); err != nil {
-		return fmt.Errorf("failed to list HelmCharts: %w", err)
-	}
-
-	for i := range helmChartList.Items {
-		chart := &helmChartList.Items[i]
-		controllerRef := metav1.GetControllerOf(chart)
-		if controllerRef == nil || controllerRef.UID != revision.UID {
-			continue
-		}
-		if chart.Name == currentName {
-			continue
-		}
-		log.Info("Deleting orphaned HelmChart", "name", chart.Name)
-		if err := r.Delete(ctx, chart); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return fmt.Errorf("failed to delete orphaned HelmChart %s: %w", chart.Name, err)
-		}
-		r.Recorder.Eventf(revision, nil, corev1.EventTypeNormal, "Deleted", "ReconcileRevision", "Deleted orphaned HelmChart %s", chart.Name)
-	}
-	return nil
 }
 
 // setReferencedCondition counts environment finalizers and sets the Referenced condition.

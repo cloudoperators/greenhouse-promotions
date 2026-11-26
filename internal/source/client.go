@@ -83,6 +83,7 @@ type GitConfig struct {
 type OCIConfig struct {
 	Repository       string
 	SemverConstraint string
+	LayerMediaType   string
 }
 
 func NewGitClient(cfg GitConfig, auth Auth) (Client, error) {

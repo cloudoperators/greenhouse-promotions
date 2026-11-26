@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"golang.org/x/sync/errgroup"
 )
@@ -181,8 +183,61 @@ func createdAt(desc *remote.Descriptor) time.Time {
 	return cf.Created.Time
 }
 
-// Fetch returns the definition bytes at the given OCI tag.
-// TODO: implement OCI artifact fetch (crane pull + layerSelector). Stub for now.
-func (c *ociClient) Fetch(_ context.Context, _, _ string) ([]byte, error) {
-	return nil, fmt.Errorf("oci fetch not implemented")
+// Fetch - pulls the artifact at ref and returns the bytes of the selected layer (filePath is unused for OCI).
+func (c *ociClient) Fetch(ctx context.Context, ref, _ string) ([]byte, error) {
+	repo, err := c.repository()
+	if err != nil {
+		return nil, err
+	}
+	auth, err := c.authenticator()
+	if err != nil {
+		return nil, err
+	}
+	opts := []remote.Option{remote.WithAuth(auth), remote.WithContext(ctx)}
+
+	img, err := remote.Image(repo.Tag(ref), opts...)
+	if err != nil {
+		return nil, fmt.Errorf("oci source: pulling %s:%s: %w", c.cfg.Repository, ref, err)
+	}
+	layers, err := img.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("oci source: reading layers of %s:%s: %w", c.cfg.Repository, ref, err)
+	}
+	if len(layers) == 0 {
+		return nil, fmt.Errorf("oci source: %s:%s has no layers", c.cfg.Repository, ref)
+	}
+
+	layer, err := c.selectLayer(layers)
+	if err != nil {
+		return nil, fmt.Errorf("oci source: %s:%s: %w", c.cfg.Repository, ref, err)
+	}
+
+	rc, err := layer.Uncompressed()
+	if err != nil {
+		return nil, fmt.Errorf("oci source: opening layer of %s:%s: %w", c.cfg.Repository, ref, err)
+	}
+	defer rc.Close()
+
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, fmt.Errorf("oci source: reading layer of %s:%s: %w", c.cfg.Repository, ref, err)
+	}
+	return data, nil
+}
+
+// selectLayer - returns the layer matching the configured media type, or the first layer when none is configured.
+func (c *ociClient) selectLayer(layers []v1.Layer) (v1.Layer, error) {
+	if c.cfg.LayerMediaType == "" {
+		return layers[0], nil
+	}
+	for _, l := range layers {
+		mt, err := l.MediaType()
+		if err != nil {
+			return nil, err
+		}
+		if string(mt) == c.cfg.LayerMediaType {
+			return l, nil
+		}
+	}
+	return nil, fmt.Errorf("no layer with media type %q", c.cfg.LayerMediaType)
 }
