@@ -1,0 +1,13 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Source
+metadata:
+  name: podinfo
+spec:
+  interval: 1h
+  discoveryLimit: 5
+  source:
+    oci:
+      url: oci://zot.vcluster.gitops.shoot.live.k8s-hana.ondemand.com/abhi/plugindefinitions/podinfo
+      semverConstraint: ">=6.11.0 <6.15.0" # <6.16.0
+      layerSelector:
+        mediaType: application/vnd.greenhouse.plugindefinition.layer.v1+yaml

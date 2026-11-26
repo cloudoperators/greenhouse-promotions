@@ -1,0 +1,29 @@
+apiVersion: greenhouse.sap/v1alpha1
+kind: PluginPreset
+metadata:
+  name: podinfo-k8s-runtime
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster-type: k8s-runtime
+  plugin:
+    pluginDefinitionRef:
+      kind: PluginDefinition
+      name: podinfo
+    displayName: Podinfo Runtime
+    releaseName: podinfo
+    releaseNamespace: podinfo
+    optionValues:
+      - name: replicaCount
+        value: 3
+      - name: ui.message
+        value: "podinfo on k8s-runtime"
+  clusterOptionOverrides:
+    - clusterName: rt-eu-de-1
+      overrides:
+        - name: ui.message
+          value: "podinfo on rt-eu-de-1 (runtime / eu-de)"
+    - clusterName: rt-eu-nl-1
+      overrides:
+        - name: ui.message
+          value: "podinfo on rt-eu-nl-1 (runtime / eu-nl)"

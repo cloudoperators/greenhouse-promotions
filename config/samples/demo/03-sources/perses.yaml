@@ -1,0 +1,13 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Source
+metadata:
+  name: perses
+spec:
+  interval: 1h
+  discoveryLimit: 5
+  source:
+    oci:
+      url: oci://zot.vcluster.gitops.shoot.live.k8s-hana.ondemand.com/abhi/plugindefinitions/perses
+      semverConstraint: ">=0.23.0 <0.25.0" # <0.26.0
+      layerSelector:
+        mediaType: application/vnd.greenhouse.plugindefinition.layer.v1+yaml

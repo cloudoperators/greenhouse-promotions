@@ -1,0 +1,17 @@
+apiVersion: promotion.cloudoperators.dev/v1alpha1
+kind: Environment
+metadata:
+  name: podinfo-canary
+spec:
+  sourceRef:
+    name: podinfo
+  clusterSelector:
+    matchLabels:
+      environment: canary
+  environment:
+    requestFromSource:
+      strategy: Latest
+  gate:
+    soak: 10s
+    autoPromote: true
+  maxHistory: 5
