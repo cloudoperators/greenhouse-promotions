@@ -1,0 +1,50 @@
+apiVersion: greenhouse.sap/v1alpha1
+kind: PluginDefinition
+metadata:
+  name: podinfo
+spec:
+  version: 6.11.1
+  displayName: Podinfo
+  description: Tiny web application made with Go for demoing Kubernetes rollouts
+  icon: https://raw.githubusercontent.com/stefanprodan/podinfo/master/docs/screens/podinfo-logo.png
+  docsURL: https://github.com/stefanprodan/podinfo
+  helmChart:
+    name: podinfo
+    repository: oci://ghcr.io/stefanprodan/charts
+    version: 6.11.1
+  options:
+    - name: replicaCount
+      displayName: Replica count
+      description: Number of podinfo replicas to run
+      default: 1
+      required: false
+      type: int
+    - name: logLevel
+      displayName: Log level
+      description: Application log level
+      default: info
+      required: false
+      type: string
+    - name: ui.color
+      displayName: UI color
+      description: Accent color of the podinfo UI
+      default: "#34577c"
+      required: false
+      type: string
+    - name: ui.message
+      displayName: UI message
+      description: Greeting message shown in the podinfo UI
+      required: false
+      type: string
+    - name: service.httpPort
+      displayName: HTTP port
+      description: HTTP port exposed by the podinfo service
+      default: 9898
+      required: false
+      type: int
+    - name: faults.delay
+      displayName: Inject delay fault
+      description: Enable the artificial response delay fault for demos
+      default: false
+      required: false
+      type: bool
