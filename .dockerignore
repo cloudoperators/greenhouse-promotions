@@ -12,3 +12,6 @@
 # Re-include Go module files
 !go.mod
 !go.sum
+
+# Re-include the Makefile (Dockerfile builds via `make action-build`)
+!Makefile

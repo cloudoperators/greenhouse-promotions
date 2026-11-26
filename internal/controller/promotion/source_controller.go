@@ -60,13 +60,12 @@ func (r *SourceReconciler) EnsureCreated(ctx context.Context, obj lifecycle.Runt
 	phase := &sourcephase.Phase{
 		Client: r.Client,
 		Scheme: r.Scheme,
-		Source: src,
 	}
 	routines := []lifecycle.SubRoutine{
-		phase.ResolveClient,
-		phase.Discover,
-		phase.CreateRevisions,
-		phase.ReconcileStatus,
+		phase.EnsureClient(src),
+		phase.EnsureDiscovered(src),
+		phase.EnsureRevisions(src),
+		phase.EnsureStatus(src),
 	}
 	return lifecycle.ExecuteSubRoutine(ctx, routines)
 }
